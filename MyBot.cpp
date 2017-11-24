@@ -4,7 +4,7 @@
 
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("EvenMoreTerribladfasdfaey");
+    const hlt::Metadata metadata = hlt::initialize("EvenMoreTerribla asdf af dfasdfaey");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -97,21 +97,15 @@ int main() {
                     std::vector<hlt::Ship> &v = it->second;
                     for(int i=0; i<v.size(); i++) {
                         hlt::Ship &enemy = v[i];
-                        if (enemy.docking_status == hlt::ShipDockingStatus::Undocked
-                                || enemy.docking_status == hlt::ShipDockingStatus::Undocking){
-                            double distance = ship.location.get_distance_to(enemy.location);
-                            distance /= 5;
-                            double weight = distance * distance;
-                            int k = enemy.targetted;
-                            while(k!=0) {
-                                weight *= 1.5;
-                                k--;
-                            }
+                        double distance = ship.location.get_distance_to(enemy.location);
+                        if (enemy.docking_status != hlt::ShipDockingStatus::Undocked){
+                            distance -= 14;
+                        }
+                        distance *= 1 + enemy.targetted;
 
-                            if (weight < min_so_far) {
-                                min_so_far = weight;
-                                ship_ptr = &v[i];
-                            }
+                        if (distance < min_so_far) {
+                            min_so_far = distance;
+                            ship_ptr = &v[i];
                         }
                     }
                 }
