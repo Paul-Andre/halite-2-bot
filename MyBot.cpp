@@ -61,7 +61,7 @@ int main() {
 
                 }
                 else {
-                    docked -= planet.targetted * 0.333;
+                    docked -= planet.targetted * 0.666;
                 }
 
                 int remaining_docks = planet.docking_spots - docked;
@@ -75,7 +75,7 @@ int main() {
                     weight += docked*4./7. + weight*docked*(1./12.)*4;
                 }
                 else {
-                    double docked_when_arrive = docked + distance*(docked)*(1./12.);
+                    double docked_when_arrive = docked + distance*(docked)*(1./12.)*0.666;
                     docked_when_arrive += planet.targetted * 0.666;
                     weight *= 1 + ((double)docked_when_arrive/planet.docking_spots);
                 }
