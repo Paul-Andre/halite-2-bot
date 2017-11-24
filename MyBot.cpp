@@ -4,7 +4,7 @@
 
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("expo with navigation");
+    const hlt::Metadata metadata = hlt::initialize("current better nav");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -48,7 +48,6 @@ int main() {
             double min_so_far = 1e20;
 
 
-            if (map.planets.size() == 0) break; // todo ... wew;
             hlt::Planet *target_planet_ptr = nullptr;
 
             for( int i = 0; i<map.planets.size(); i++) {

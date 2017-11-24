@@ -7,56 +7,87 @@
 
 namespace hlt {
     namespace navigation {
-        static void check_and_add_entity_between(
-                std::vector<const Entity *>& entities_found,
+        static bool check_and_add_entity_between(
                 const Location& start,
                 const Location& target,
                 const Entity& my_entity,
                 const Entity& entity_to_check)
         {
-            double tot_radius = my_entity.radius + entity_to_check.radius + constants::FORECAST_FUDGE_FACTOR;
+            //double tot_radius = my_entity.radius + entity_to_check.radius + constants::FORECAST_FUDGE_FACTOR;
 
             const Location &location = entity_to_check.location;
             if (location == start || location == target) {
-                return;
+                return false;
             }
+
             if (entity_to_check.thrust == Location({0,0})) {
                 if (collision::segment_circle_intersect(start, target, entity_to_check, constants::FORECAST_FUDGE_FACTOR)) {
-                    entities_found.push_back(&entity_to_check);
-                    return;
+                    return true;
                 }
             }
-            else {
-                Location x = start;
-                Location dx = (target + (start * (-1.)))*(1./14.);
-                Location y = entity_to_check.location;
-                Location dy = (entity_to_check.thrust)*(1./14.);
-                for(int i=0; i<=14; i++) {
-                    if (x.get_distance_to(y) <= tot_radius) {
-                        entities_found.push_back(&entity_to_check);
-                        return;
-                    }
-                    x += dx;
-                    y += dy;
-                }
-            }
+
+            return false;
+
         }
 
-        static std::vector<const Entity *> objects_between(const Map& map, const Location& start, const Location& target,
+
+        static bool check_moving_collision(Location x, Location y, Location dx, Location dy, double tot_radius) {
+
+
+            dx *= 0.1;
+            dy *= 0.1;
+
+            for(int i=0; i<=10; i++) {
+                if (x.get_distance_to(y) <= tot_radius) {
+                    return true;
+                }
+                x += dx;
+                y += dy;
+            }
+
+            return false;
+        }
+
+
+
+        static bool objects_between(const Map& map, const Location& start, const Location& target,
                 const Entity& my_entity) {
-            std::vector<const Entity *> entities_found;
 
             for (const Planet& planet : map.planets) {
-                check_and_add_entity_between(entities_found, start, target, my_entity, planet);
+                if (check_and_add_entity_between( start, target, my_entity, planet)) return true;
             }
 
             for (const auto& player_ship : map.ships) {
                 for (const Ship& ship : player_ship.second) {
-                    check_and_add_entity_between(entities_found, start, target, my_entity, ship);
+                    if (check_and_add_entity_between( start, target, my_entity, ship)) return true;
                 }
             }
 
-            return entities_found;
+            double dist = target.get_distance_to(start);
+            double thrust = std::min(7, (int)dist);
+
+            double angle_rad = start.orient_towards_in_rad(target);
+
+            const int angle_deg = util::angle_rad_to_deg_clipped(angle_rad);
+            angle_rad = angle_deg * (2. * M_PI / 360.);
+
+
+            Location dx = {
+                cos(angle_rad) * thrust,
+                sin(angle_rad) * thrust
+            };
+
+
+            for (const auto& player_ship : map.ships) {
+                for (const Ship& ship : player_ship.second) {
+                    if (!(ship.location == my_entity.location)) {
+                        const double tot_radius = my_entity.radius + ship.radius;
+                        if (check_moving_collision(my_entity.location, ship.location, dx, ship.thrust, tot_radius)) return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         static possibly<Move> navigate_ship_towards_target(
@@ -75,7 +106,7 @@ namespace hlt {
             const double distance = ship.location.get_distance_to(target);
             const double angle_rad = ship.location.orient_towards_in_rad(target);
 
-            if (avoid_obstacles && !objects_between(map, ship.location, target, ship).empty()) {
+            if (avoid_obstacles && objects_between(map, ship.location, target, ship)) {
                 const double new_target_dx = cos(angle_rad + angular_step_rad) * distance;
                 const double new_target_dy = sin(angle_rad + angular_step_rad) * distance;
                 const Location new_target = { ship.location.pos_x + new_target_dx, ship.location.pos_y + new_target_dy };
