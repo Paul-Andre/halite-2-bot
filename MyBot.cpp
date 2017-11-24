@@ -4,7 +4,7 @@
 
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("EvenMoreTerribla asdf af dfasdfaey");
+    const hlt::Metadata metadata = hlt::initialize("expo with navigation");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -40,7 +40,7 @@ int main() {
         }
         */
 
-        for (const hlt::Ship& ship : map.ships.at(player_id)) {
+        for ( hlt::Ship& ship : map.ships.at(player_id)) {
             if (ship.docking_status != hlt::ShipDockingStatus::Undocked) {
                 continue;
             }
@@ -90,7 +90,36 @@ int main() {
 
             auto it = map.ships.begin();
 
+
             hlt::Ship *ship_ptr = nullptr;
+
+            for(; it != map.ships.end(); it++) {
+                if(it->first != player_id) {
+
+                    std::vector<hlt::Ship> &v = it->second;
+                    for(int i=0; i<v.size(); i++) {
+                        hlt::Ship &enemy = v[i];
+                        if (enemy.docking_status == hlt::ShipDockingStatus::Undocked
+                                || enemy.docking_status == hlt::ShipDockingStatus::Undocking){
+                            double distance = ship.location.get_distance_to(enemy.location);
+                            distance /= 5;
+                            double weight = distance * distance;
+                            int k = enemy.targetted;
+                            while(k!=0) {
+                                weight *= 1.5;
+                                k--;
+                            }
+
+                            if (weight < min_so_far) {
+                                min_so_far = weight;
+                                ship_ptr = &v[i];
+                            }
+                        }
+                    }
+                }
+            }
+
+            /*
             for(; it != map.ships.end(); it++) {
                 if(it->first != player_id) {
 
@@ -101,15 +130,24 @@ int main() {
                         if (enemy.docking_status != hlt::ShipDockingStatus::Undocked){
                             distance -= 14;
                         }
-                        distance *= 1 + enemy.targetted;
+                        //distance *= 1 + enemy.targetted;
 
-                        if (distance < min_so_far) {
-                            min_so_far = distance;
+                        double weight = distance;
+                        int k = enemy.targetted;
+                        while(k!=0) {
+                            weight *= 1.5;
+                            k--;
+                        }
+
+                        if (weight < min_so_far) {
+                            min_so_far = weight;
                             ship_ptr = &v[i];
                         }
                     }
                 }
             }
+            */
+
 
 
             if (ship_ptr != nullptr) {
@@ -119,6 +157,10 @@ int main() {
                 if (move.second) {
                     moves.push_back(move.first);
                     ship_ptr -> targetted ++;
+                        double angle_rad  = move.first.move_angle_deg * (M_PI * 2. /360.);
+                        double thrust = move.first.move_thrust;
+                        ship.thrust.pos_x = cos(angle_rad) * thrust;
+                        ship.thrust.pos_y = sin(angle_rad) * thrust;
                     continue;
                 }
             }
@@ -147,6 +189,10 @@ int main() {
                         hlt::navigation::navigate_ship_to_dock(map, ship, planet, hlt::constants::MAX_SPEED);
                     if (move.second) {
                         moves.push_back(move.first);
+                        double angle_rad  = move.first.move_angle_deg * (M_PI * 2. /360.);
+                        double thrust = move.first.move_thrust;
+                        ship.thrust.pos_x = cos(angle_rad) * thrust;
+                        ship.thrust.pos_y = sin(angle_rad) * thrust;
                     }
                 }
             }
@@ -173,6 +219,11 @@ int main() {
 
                 if (move.second) {
                     moves.push_back(move.first);
+                        double angle_rad  = move.first.move_angle_deg * (M_PI * 2. /360.);
+                        double thrust = move.first.move_thrust;
+                        ship.thrust.pos_x = cos(angle_rad) * thrust;
+                        ship.thrust.pos_y = sin(angle_rad) * thrust;
+                        enemy.targetted++;
                 }
             }
 

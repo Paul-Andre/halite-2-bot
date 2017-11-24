@@ -11,27 +11,48 @@ namespace hlt {
                 std::vector<const Entity *>& entities_found,
                 const Location& start,
                 const Location& target,
+                const Entity& my_entity,
                 const Entity& entity_to_check)
         {
+            double tot_radius = my_entity.radius + entity_to_check.radius + constants::FORECAST_FUDGE_FACTOR;
+
             const Location &location = entity_to_check.location;
             if (location == start || location == target) {
                 return;
             }
-            if (collision::segment_circle_intersect(start, target, entity_to_check, constants::FORECAST_FUDGE_FACTOR)) {
-                entities_found.push_back(&entity_to_check);
+            if (entity_to_check.thrust == Location({0,0})) {
+                if (collision::segment_circle_intersect(start, target, entity_to_check, constants::FORECAST_FUDGE_FACTOR)) {
+                    entities_found.push_back(&entity_to_check);
+                    return;
+                }
+            }
+            else {
+                Location x = start;
+                Location dx = (target + (start * (-1.)))*0.10;
+                Location y = entity_to_check.location;
+                Location dy = (entity_to_check.thrust)*0.10;
+                for(int i=0; i<=10; i++) {
+                    if (x.get_distance_to(y) <= tot_radius) {
+                        entities_found.push_back(&entity_to_check);
+                        return;
+                    }
+                    x += dx;
+                    y += dy;
+                }
             }
         }
 
-        static std::vector<const Entity *> objects_between(const Map& map, const Location& start, const Location& target) {
+        static std::vector<const Entity *> objects_between(const Map& map, const Location& start, const Location& target,
+                const Entity& my_entity) {
             std::vector<const Entity *> entities_found;
 
             for (const Planet& planet : map.planets) {
-                check_and_add_entity_between(entities_found, start, target, planet);
+                check_and_add_entity_between(entities_found, start, target, my_entity, planet);
             }
 
             for (const auto& player_ship : map.ships) {
                 for (const Ship& ship : player_ship.second) {
-                    check_and_add_entity_between(entities_found, start, target, ship);
+                    check_and_add_entity_between(entities_found, start, target, my_entity, ship);
                 }
             }
 
@@ -54,7 +75,7 @@ namespace hlt {
             const double distance = ship.location.get_distance_to(target);
             const double angle_rad = ship.location.orient_towards_in_rad(target);
 
-            if (avoid_obstacles && !objects_between(map, ship.location, target).empty()) {
+            if (avoid_obstacles && !objects_between(map, ship.location, target, ship).empty()) {
                 const double new_target_dx = cos(angle_rad + angular_step_rad) * distance;
                 const double new_target_dy = sin(angle_rad + angular_step_rad) * distance;
                 const Location new_target = { ship.location.pos_x + new_target_dx, ship.location.pos_y + new_target_dy };

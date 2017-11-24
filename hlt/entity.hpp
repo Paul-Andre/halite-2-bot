@@ -11,6 +11,8 @@ namespace hlt {
         int health;
         double radius;
 
+        Location thrust = {0,0};
+
         bool is_alive() const {
             return health > 0;
         }

@@ -9,6 +9,29 @@ namespace hlt {
     struct Location {
         double pos_x, pos_y;
 
+        void operator+=(const Location& b) {
+            pos_x += b.pos_x;
+            pos_y += b.pos_y;
+        }
+
+        Location operator+(const Location& b) const {
+            Location out = *this;
+            out += b;
+            return out;
+        }
+
+        void operator*=(double c) {
+            pos_x *= c;
+            pos_y *= c;
+        }
+
+        Location operator*(double c) const {
+            Location out = *this;
+            out *= c;
+            return out;
+        }
+
+
         double get_distance_to(const Location& target) const {
             const double dx = pos_x - target.pos_x;
             const double dy = pos_y - target.pos_y;
