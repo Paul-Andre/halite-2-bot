@@ -17,6 +17,8 @@ namespace hlt {
         /// The turns left before the ship can fire again.
         int weapon_cooldown;
 
+        int targetted = 0;
+
         ShipDockingStatus docking_status;
 
         /// The number of turns left to complete (un)docking.
