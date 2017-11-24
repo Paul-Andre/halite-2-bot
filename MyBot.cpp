@@ -59,7 +59,6 @@ int main() {
 
                 if (planet.owner_id == player_id || !planet.owned) {
 
-                    docked += planet.targetted * 0.666;
                 }
                 else {
                     docked -= planet.targetted * 0.333;
@@ -76,7 +75,9 @@ int main() {
                     weight += docked*4./7. + weight*docked*(1./12.)*4;
                 }
                 else {
-                    weight *= 1 + ((double)docked/planet.docking_spots);
+                    double docked_when_arrive = docked + distance*(docked)*(1./12.);
+                    docked_when_arrive += planet.targetted * 0.666;
+                    weight *= 1 + ((double)docked_when_arrive/planet.docking_spots);
                 }
 
                 if (planet.owner_id != player_id || !planet.is_full()){
