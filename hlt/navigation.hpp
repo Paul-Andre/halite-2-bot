@@ -28,10 +28,10 @@ namespace hlt {
             }
             else {
                 Location x = start;
-                Location dx = (target + (start * (-1.)))*0.10;
+                Location dx = (target + (start * (-1.)))*(1./14.);
                 Location y = entity_to_check.location;
-                Location dy = (entity_to_check.thrust)*0.10;
-                for(int i=0; i<=10; i++) {
+                Location dy = (entity_to_check.thrust)*(1./14.);
+                for(int i=0; i<=14; i++) {
                     if (x.get_distance_to(y) <= tot_radius) {
                         entities_found.push_back(&entity_to_check);
                         return;
