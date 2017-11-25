@@ -59,37 +59,24 @@ int main() {
 
                 if (planet.owner_id == player_id || !planet.owned) {
 
+                    docked += planet.targetted * 0.666;
                 }
                 else {
-
+                    docked -= planet.targetted * 0.333;
                 }
 
                 int remaining_docks = planet.docking_spots - docked;
 
 
-                double distance = ship.location.get_distance_to(planet.location) - planet.radius;
+                double distance = ship.location.get_distance_to(planet.location);
 
                 double weight = distance;
 
                 if (planet.owned && planet.owner_id != player_id) {
-
-                    double pretend_docked = docked - planet.targetted * 0.666;
-
-                    double tot_health = 0;
-                    for(int i=0; i<planet.docked_ships.size(); i++) {
-                        auto enemy = map.get_ship(planet.owner_id, planet.docked_ships[i]);
-                        tot_health += enemy.health;
-                    }
-
-                    weight += (tot_health - planet.targetted *.666 *255) * 4./7. + weight*pretend_docked*(1./12.)*4;
-
-                    //weight += tot_health/(64.*(1. + planet.targetted)) * 7. ;
-                    //(((distance*(1./.7)*docked*(1./12.)) - (1.  + planet.targetted))) * (20);
+                    weight += docked*4./7. + weight*docked*(1./12.)*4;
                 }
                 else {
-                    double docked_when_arrive = docked + distance*(1./7.)*(docked)*(1./12.)*0.666;
-                    docked_when_arrive += planet.targetted * 0.666;
-                    weight *= 1 + 4*((double)docked_when_arrive/planet.docking_spots);
+                    weight *= 1 + ((double)docked/planet.docking_spots);
                 }
 
                 if (planet.owner_id != player_id || !planet.is_full()){
@@ -217,7 +204,7 @@ int main() {
                 for(int i=0; i<planet.docked_ships.size(); i++) {
                     auto enemy = map.get_ship(planet.owner_id, planet.docked_ships[i]);
                     double distance = ship.location.get_distance_to(enemy.location);
-                    distance += (double)(enemy.health)/64./(1. + enemy.targetted) * 7;
+                    distance += (double)(enemy.health)/64. * 7;
                     if (distance < min_so_far) {
                         best_i = i;
                         min_so_far = distance;
