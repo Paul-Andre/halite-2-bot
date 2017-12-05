@@ -50,7 +50,7 @@ namespace hlt {
                     segStart,
                     segEnd,
                     circle,
-                    0.2001);
+                    0.001);
 
 
             /*
@@ -74,8 +74,14 @@ namespace hlt {
 
 
 
-        static bool objects_between(const Map& map, const Location& start, const Location& target,
-                const Entity& my_entity) {
+        static bool objects_between(
+                const Map& map,
+                const Location& start,
+                const Location& target,
+                const Entity& my_entity,
+                const Location& step
+                ) 
+        {
 
             for (const Planet& planet : map.planets) {
                 if (check_and_add_entity_between( start, target, my_entity, planet)) return true;
@@ -87,26 +93,13 @@ namespace hlt {
                 }
             }
 
-            double dist = target.get_distance_to(start);
-            double thrust = std::min(7, (int)dist);
-
-            double angle_rad = start.orient_towards_in_rad(target);
-
-            const int angle_deg = util::angle_rad_to_deg_clipped(angle_rad);
-            angle_rad = angle_deg * (2. * M_PI / 360.);
-
-
-            Location dx = {
-                cos(angle_rad) * thrust,
-                sin(angle_rad) * thrust
-            };
 
 
             for (const auto& player_ship : map.ships) {
                 for (const Ship& ship : player_ship.second) {
                     if (!(ship.location == my_entity.location)) {
                         const double tot_radius = my_entity.radius + ship.radius;
-                        if (check_moving_collision(my_entity.location, ship.location, dx, ship.thrust, tot_radius)) return true;
+                        if (check_moving_collision(my_entity.location, ship.location, step, ship.thrust, tot_radius)) return true;
                     }
                 }
             }
@@ -128,16 +121,9 @@ namespace hlt {
             }
 
             const double distance = ship.location.get_distance_to(target);
-            const double angle_rad = ship.location.orient_towards_in_rad(target);
-
-            if (avoid_obstacles && objects_between(map, ship.location, target, ship)) {
-                const double new_target_dx = cos(angle_rad + angular_step_rad) * distance;
-                const double new_target_dy = sin(angle_rad + angular_step_rad) * distance;
-                const Location new_target = { ship.location.pos_x + new_target_dx, ship.location.pos_y + new_target_dy };
-
-                return navigate_ship_towards_target(
-                        map, ship, new_target, max_thrust, true, (max_corrections - 1), angular_step_rad);
-            }
+            const double angle_rad_unclipped = ship.location.orient_towards_in_rad(target);
+            const int angle_deg = util::angle_rad_to_deg_clipped(angle_rad_unclipped);
+            const double angle_rad = angle_deg * (2. * M_PI / 360.);
 
             int thrust;
             if (distance < max_thrust) {
@@ -147,7 +133,22 @@ namespace hlt {
                 thrust = max_thrust;
             }
 
-            const int angle_deg = util::angle_rad_to_deg_clipped(angle_rad);
+            Location step = {
+                cos(angle_rad) * thrust,
+                sin(angle_rad) * thrust
+            };
+
+
+            if (avoid_obstacles && objects_between(map, ship.location, target, ship, step)) {
+                const double new_target_dx = cos(angle_rad + angular_step_rad) * distance;
+                const double new_target_dy = sin(angle_rad + angular_step_rad) * distance;
+                const Location new_target = { ship.location.pos_x + new_target_dx, ship.location.pos_y + new_target_dy };
+
+                return navigate_ship_towards_target(
+                        map, ship, new_target, max_thrust, true, (max_corrections - 1), angular_step_rad);
+            }
+
+
 
             return { Move::thrust(ship.entity_id, thrust, angle_deg), true };
         }
