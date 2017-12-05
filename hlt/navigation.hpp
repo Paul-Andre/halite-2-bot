@@ -33,11 +33,12 @@ namespace hlt {
 
         static bool check_moving_collision(Location x, Location y, Location dx, Location dy, double tot_radius) {
 
+            int steps = 20;
 
-            dx *= 0.1;
-            dy *= 0.1;
+            dx *= (1./steps);
+            dy *= (1./steps);
 
-            for(int i=0; i<=10; i++) {
+            for(int i=0; i<=steps; i++) {
                 if (x.get_distance_to(y) <= tot_radius) {
                     return true;
                 }

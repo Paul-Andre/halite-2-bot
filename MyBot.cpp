@@ -4,7 +4,7 @@
 
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("bot 8 candidate");
+    const hlt::Metadata metadata = hlt::initialize("bot 8 new candidate");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -69,6 +69,8 @@ int main() {
 
 
                 double distance = ship.location.get_distance_to(planet.location);
+
+                distance -= planet.radius;
 
                 double weight = distance;
 
