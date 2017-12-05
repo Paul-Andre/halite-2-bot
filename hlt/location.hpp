@@ -14,9 +14,20 @@ namespace hlt {
             pos_y += b.pos_y;
         }
 
+        void operator-=(const Location& b) {
+            pos_x -= b.pos_x;
+            pos_y -= b.pos_y;
+        }
+
         Location operator+(const Location& b) const {
             Location out = *this;
             out += b;
+            return out;
+        }
+
+        Location operator-(const Location& b) const {
+            Location out = *this;
+            out -= b;
             return out;
         }
 

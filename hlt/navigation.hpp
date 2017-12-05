@@ -31,15 +31,36 @@ namespace hlt {
         }
 
 
-        static bool check_moving_collision(Location x, Location y, Location dx, Location dy, double tot_radius) {
+        static bool check_moving_collision(
+                Location x,
+                Location y,
+                Location dx,
+                Location dy,
+                double tot_radius)
+        {
 
+            Location segStart = x - y;
+            Location segEnd = segStart + dx - dy;
+
+            Entity circle;
+            circle.radius = tot_radius;
+            circle.location = {0,0};
+
+            return collision::segment_circle_intersect(
+                    segStart,
+                    segEnd,
+                    circle,
+                    0.2001);
+
+
+            /*
             int steps = 20;
 
             dx *= (1./steps);
             dy *= (1./steps);
 
             for(int i=0; i<=steps; i++) {
-                if (x.get_distance_to(y) <= tot_radius) {
+                if (x.get_distance_to(y) <= tot_radius + 0.01) {
                     return true;
                 }
                 x += dx;
@@ -47,6 +68,8 @@ namespace hlt {
             }
 
             return false;
+            */
+
         }
 
 
