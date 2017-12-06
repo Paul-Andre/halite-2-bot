@@ -22,7 +22,11 @@ namespace hlt {
         /// as well as docked ships.
         std::vector<EntityId> docked_ships;
 
+        // how much of my ships are planning to go to that planet
         int targetted = 0;
+
+        // how much incoming enemy ships my planet will send ships against
+        int planning_to_defend = 0;
 
         bool is_full() const {
             return docked_ships.size() == docking_spots;

@@ -19,6 +19,18 @@ namespace hlt {
 
         int targetted = 0;
 
+
+        double distances_to_my_closest_planet = 10000;
+
+
+        double threat;
+
+        // What planets the enimy ship might be planning to attack
+        //vector<EntityId> planning_to_attack;
+
+        // How valuable this ship is to us.
+        //double value;
+
         ShipDockingStatus docking_status;
 
         /// The number of turns left to complete (un)docking.

@@ -4,7 +4,7 @@
 
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("Bot 9");
+    const hlt::Metadata metadata = hlt::initialize("Post Bot 9");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -29,16 +29,58 @@ int main() {
 
         hlt::Map map = hlt::in::get_map();
 
-        /*
-        vector<hlt::Ship*> enemy_ships;
-        for(auto p: map.ships) {
-            if (p.first != player_id) {
-                for (int i=0; i< p.second.size(); i++) {
-                    enemy_ships.push_back(&p.second[i]);
+
+        //for (const auto& myShip : map.ships[player_id]) {
+
+        for (auto& player_ship : map.ships) {
+            if (player_ship.first != player_id) {
+
+                for(auto& ship : player_ship.second) {
+                for (auto& planet : map.planets) {
+                    if (planet.owner_id == player_id) {
+
+                        int num_docked = 0;
+
+                        int num_total = planet.docked_ships.size();
+                        
+
+                        double closest_distance  = 100000;
+
+                        for (auto ship_id : planet.docked_ships) {
+                            hlt::Ship& my_ship = map.get_ship(player_id, ship_id);
+                            if(my_ship.docking_status == hlt::ShipDockingStatus::Docked){
+                                num_docked++;
+                            }
+
+                            ship.distances_to_my_closest_planet  = std::min(
+                                    ship.distances_to_my_closest_planet,
+                                    my_ship.location.get_distance_to(ship.location)
+                                    );
+
+                            closest_distance  = std::min(
+                                    closest_distance,
+                                    my_ship.location.get_distance_to(ship.location)
+                                    );
+
+                        }
+
+                        planet.planning_to_defend ++;
+
+                        double time_to_span_new = (72./(num_docked*6)) * (planet.planning_to_defend);
+
+                        double time_to_reach = closest_distance/7.;
+
+                        double time_to_do_damage = time_to_span_new - time_to_reach + 4;
+
+                        if (time_to_do_damage > 0) {
+                            ship.threat += std::min((double)num_docked, time_to_do_damage * .25);
+                        }
+                    }
                 }
             }
+            }
         }
-        */
+                            
 
         for ( hlt::Ship& ship : map.ships.at(player_id)) {
             if (ship.docking_status != hlt::ShipDockingStatus::Undocked) {
@@ -102,6 +144,7 @@ int main() {
                         hlt::Ship &enemy = v[i];
                         if (enemy.docking_status == hlt::ShipDockingStatus::Undocked
                                 || enemy.docking_status == hlt::ShipDockingStatus::Undocking){
+
                             double distance = ship.location.get_distance_to(enemy.location);
                             distance /= 5;
                             double weight = distance * distance;
@@ -110,6 +153,8 @@ int main() {
                                 weight *= 1.5;
                                 k--;
                             }
+
+                            weight /= sqrt(sqrt(1+ship.threat));
 
                             if (weight < min_so_far) {
                                 min_so_far = weight;
@@ -172,13 +217,6 @@ int main() {
             hlt::Planet &planet = *target_planet_ptr;
 
             planet.targetted ++;
-            //std::cerr << planet.targetted;
-
-            /*
-            std::ostringstream out;
-            out << planet.targetted <<" adfas adfa adsfa asdf adfa "<<std::endl;
-            hlt::Log::log(out.str());
-            */
 
             if (planet.owner_id == player_id || !planet.owned) {
 

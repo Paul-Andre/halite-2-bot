@@ -6,4 +6,4 @@ cmake .
 make MyBot
 
 cd replays
-../halite -d "300 200" "../MyBot8" "../MyBot"
+../halite -d "300 200" "../MyBot9" "../MyBot"

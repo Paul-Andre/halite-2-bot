@@ -18,11 +18,11 @@ namespace hlt {
 
         Map(int width, int height);
 
-        const Ship& get_ship(const PlayerId player_id, const EntityId ship_id) const {
+        Ship& get_ship(const PlayerId player_id, const EntityId ship_id)  {
             return ships.at(player_id).at(ship_map.at(player_id).at(ship_id));
         }
 
-        const Planet& get_planet(const EntityId planet_id) const {
+        Planet& get_planet(const EntityId planet_id)  {
             return planets.at(planet_map.at(planet_id));
         }
     };
