@@ -97,7 +97,7 @@ namespace hlt {
 
             for (const auto& player_ship : map.ships) {
                 for (const Ship& ship : player_ship.second) {
-                    if (!(ship.location == my_entity.location)) {
+                    if (!(ship.location == my_entity.location)){ // && !(ship.location == target))) {
                         const double tot_radius = my_entity.radius + ship.radius;
                         if (check_moving_collision(my_entity.location, ship.location, step, ship.thrust, tot_radius)) return true;
                     }

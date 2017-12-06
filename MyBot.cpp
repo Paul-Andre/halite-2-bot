@@ -2,9 +2,11 @@
 #include <cassert>
 #include "hlt/navigation.hpp"
 
+#define SQR(x) ((x)*(x))
+
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("Post Bot 9");
+    const hlt::Metadata metadata = hlt::initialize("Bot 10 Candidate sqrt");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -34,50 +36,20 @@ int main() {
 
         for (auto& player_ship : map.ships) {
             if (player_ship.first != player_id) {
-
                 for(auto& ship : player_ship.second) {
-                for (auto& planet : map.planets) {
-                    if (planet.owner_id == player_id) {
+                    for (auto& planet : map.planets) {
+                        if (planet.owner_id == player_id) {
+                            for (auto ship_id : planet.docked_ships) {
+                                hlt::Ship& my_ship = map.get_ship(player_id, ship_id);
 
-                        int num_docked = 0;
-
-                        int num_total = planet.docked_ships.size();
-                        
-
-                        double closest_distance  = 100000;
-
-                        for (auto ship_id : planet.docked_ships) {
-                            hlt::Ship& my_ship = map.get_ship(player_id, ship_id);
-                            if(my_ship.docking_status == hlt::ShipDockingStatus::Docked){
-                                num_docked++;
+                                ship.distance_to_my_closest_planet  = std::min(
+                                        ship.distance_to_my_closest_planet,
+                                        my_ship.location.get_distance_to(ship.location)
+                                );
                             }
-
-                            ship.distances_to_my_closest_planet  = std::min(
-                                    ship.distances_to_my_closest_planet,
-                                    my_ship.location.get_distance_to(ship.location)
-                                    );
-
-                            closest_distance  = std::min(
-                                    closest_distance,
-                                    my_ship.location.get_distance_to(ship.location)
-                                    );
-
-                        }
-
-                        planet.planning_to_defend ++;
-
-                        double time_to_span_new = (72./(num_docked*6)) * (planet.planning_to_defend);
-
-                        double time_to_reach = closest_distance/7.;
-
-                        double time_to_do_damage = time_to_span_new - time_to_reach + 4;
-
-                        if (time_to_do_damage > 0) {
-                            ship.threat += std::min((double)num_docked, time_to_do_damage * .25);
                         }
                     }
                 }
-            }
             }
         }
                             
@@ -134,6 +106,29 @@ int main() {
             auto it = map.ships.begin();
 
 
+            /*
+            // get the best docked ship to molest
+
+            for(; it != map.ships.end(); it++) {
+                if(it->first != player_id) {
+
+                    std::vector<hlt::Ship> &v = it->second;
+                    for(int i=0; i<v.size(); i++) {
+                        double distance = ship.location.get_distance_to(enemy.location);
+                        hlt::Ship &enemy = v[i];
+
+                        if (enemy.docking_status == hlt::ShipDockingStatus::Docked
+                                */
+
+
+            double distance_to_target_planet = 10000;
+            if (target_planet_ptr != nullptr) {
+                hlt::Planet &planet = *target_planet_ptr;
+                distance_to_target_planet = planet.location.get_distance_to(ship.location);
+            }
+
+
+
             hlt::Ship *ship_ptr = nullptr;
 
             for(; it != map.ships.end(); it++) {
@@ -141,20 +136,32 @@ int main() {
 
                     std::vector<hlt::Ship> &v = it->second;
                     for(int i=0; i<v.size(); i++) {
+
                         hlt::Ship &enemy = v[i];
+
+                        double distance = ship.location.get_distance_to(enemy.location);
+
                         if (enemy.docking_status == hlt::ShipDockingStatus::Undocked
                                 || enemy.docking_status == hlt::ShipDockingStatus::Undocking){
 
-                            double distance = ship.location.get_distance_to(enemy.location);
+                            /*
+                            if (enemy.distance_to_my_closest_planet >= distance_to_target_planet) {
+                                continue;
+                            }
+                            */
+
                             distance /= 5;
                             double weight = distance * distance;
                             int k = enemy.targetted;
+
+                            if (distance_to_target_planet != 10000) {
+                                weight *= sqrt(enemy.distance_to_my_closest_planet)/ distance_to_target_planet;
+                            }
+
                             while(k!=0) {
                                 weight *= 1.5;
                                 k--;
                             }
-
-                            weight /= sqrt(sqrt(1+ship.threat));
 
                             if (weight < min_so_far) {
                                 min_so_far = weight;
@@ -164,36 +171,6 @@ int main() {
                     }
                 }
             }
-
-            /*
-            for(; it != map.ships.end(); it++) {
-                if(it->first != player_id) {
-
-                    std::vector<hlt::Ship> &v = it->second;
-                    for(int i=0; i<v.size(); i++) {
-                        hlt::Ship &enemy = v[i];
-                        double distance = ship.location.get_distance_to(enemy.location);
-                        if (enemy.docking_status != hlt::ShipDockingStatus::Undocked){
-                            distance -= 14;
-                        }
-                        //distance *= 1 + enemy.targetted;
-
-                        double weight = distance;
-                        int k = enemy.targetted;
-                        while(k!=0) {
-                            weight *= 1.5;
-                            k--;
-                        }
-
-                        if (weight < min_so_far) {
-                            min_so_far = weight;
-                            ship_ptr = &v[i];
-                        }
-                    }
-                }
-            }
-            */
-
 
 
             if (ship_ptr != nullptr) {
@@ -213,7 +190,7 @@ int main() {
 
 
 
-            if (target_planet_ptr == nullptr) break;
+            if (target_planet_ptr == nullptr) continue;
             hlt::Planet &planet = *target_planet_ptr;
 
             planet.targetted ++;

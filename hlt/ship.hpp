@@ -20,7 +20,7 @@ namespace hlt {
         int targetted = 0;
 
 
-        double distances_to_my_closest_planet = 10000;
+        double distance_to_my_closest_planet = 10000;
 
 
         double threat;
