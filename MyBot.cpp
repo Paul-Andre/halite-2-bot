@@ -6,7 +6,7 @@
 
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("Bot 10");
+    const hlt::Metadata metadata = hlt::initialize("Bot 11");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -155,7 +155,7 @@ int main() {
                             int k = enemy.targetted;
 
                             if (distance_to_target_planet != 10000) {
-                                weight *= sqrt(enemy.distance_to_my_closest_planet)/ distance_to_target_planet;
+                                weight *= 0.7*(enemy.distance_to_my_closest_planet)/ distance_to_target_planet;
                             }
 
                             while(k!=0) {
