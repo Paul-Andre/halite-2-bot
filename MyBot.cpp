@@ -6,7 +6,7 @@
 
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("Bot 11");
+    const hlt::Metadata metadata = hlt::initialize("Bot 12");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;

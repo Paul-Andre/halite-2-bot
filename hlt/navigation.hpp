@@ -110,47 +110,56 @@ namespace hlt {
         static possibly<Move> navigate_ship_towards_target(
                 const Map& map,
                 const Ship& ship,
-                const Location& target,
+                const Location& orig_target,
                 const int max_thrust,
                 const bool avoid_obstacles,
                 const int max_corrections,
                 const double angular_step_rad)
         {
-            if (max_corrections <= 0) {
-                return { Move::noop(), false };
+
+            const double distance = ship.location.get_distance_to(orig_target);
+
+            const double orig_angle_rad_unclipped = ship.location.orient_towards_in_rad(orig_target);
+            const int orig_angle_deg = util::angle_rad_to_deg_clipped(orig_angle_rad_unclipped);
+            const double orig_angle_rad = orig_angle_deg * (2. * M_PI / 360.);
+
+            // TODO: there's a bunch of convergence for more easily reusing old code. Don't need all these.
+
+            int orig_orient = rand()%2;
+            if (orig_orient == 0) orig_orient = -1;
+
+            for(int i=0; i<max_corrections; i++) {
+                for(int orient = -1; orient <=1; orient+=2) {
+
+                    const double new_target_dx = cos(orig_angle_rad + i*orig_orient*orient*angular_step_rad) * distance;
+                    const double new_target_dy = sin(orig_angle_rad + i*orig_orient*orient*angular_step_rad) * distance;
+                    const Location target = { ship.location.pos_x + new_target_dx, ship.location.pos_y + new_target_dy };
+
+                    const double angle_rad_unclipped = ship.location.orient_towards_in_rad(target);
+                    const int angle_deg = util::angle_rad_to_deg_clipped(angle_rad_unclipped);
+                    const double angle_rad = angle_deg * (2. * M_PI / 360.);
+
+                    int thrust;
+                    if (distance < max_thrust) {
+                        // Do not round up, since overshooting might cause collision.
+                        thrust = (int) distance;
+                    } else {
+                        thrust = max_thrust;
+                    }
+
+                    Location step = {
+                        cos(angle_rad) * thrust,
+                        sin(angle_rad) * thrust
+                    };
+
+
+                    if (!(avoid_obstacles && objects_between(map, ship.location, target, ship, step)) ) {
+                        return { Move::thrust(ship.entity_id, thrust, angle_deg), true };
+                    }
+                }
             }
 
-            const double distance = ship.location.get_distance_to(target);
-            const double angle_rad_unclipped = ship.location.orient_towards_in_rad(target);
-            const int angle_deg = util::angle_rad_to_deg_clipped(angle_rad_unclipped);
-            const double angle_rad = angle_deg * (2. * M_PI / 360.);
-
-            int thrust;
-            if (distance < max_thrust) {
-                // Do not round up, since overshooting might cause collision.
-                thrust = (int) distance;
-            } else {
-                thrust = max_thrust;
-            }
-
-            Location step = {
-                cos(angle_rad) * thrust,
-                sin(angle_rad) * thrust
-            };
-
-
-            if (avoid_obstacles && objects_between(map, ship.location, target, ship, step)) {
-                const double new_target_dx = cos(angle_rad + angular_step_rad) * distance;
-                const double new_target_dy = sin(angle_rad + angular_step_rad) * distance;
-                const Location new_target = { ship.location.pos_x + new_target_dx, ship.location.pos_y + new_target_dy };
-
-                return navigate_ship_towards_target(
-                        map, ship, new_target, max_thrust, true, (max_corrections - 1), angular_step_rad);
-            }
-
-
-
-            return { Move::thrust(ship.entity_id, thrust, angle_deg), true };
+            return { Move::noop(), false };
         }
 
         static possibly<Move> navigate_ship_to_dock(
