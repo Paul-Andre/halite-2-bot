@@ -7,6 +7,7 @@
 
 namespace hlt {
     namespace navigation {
+        using namespace constants;
         static bool check_and_add_entity_between(
                 const Location& start,
                 const Location& target,
@@ -74,7 +75,7 @@ namespace hlt {
 
 
 
-        static bool objects_between(
+        static bool will_collide(
                 const Map& map,
                 const Location& start,
                 const Location& target,
@@ -97,12 +98,23 @@ namespace hlt {
 
             for (const auto& player_ship : map.ships) {
                 for (const Ship& ship : player_ship.second) {
-                    if (!(ship.location == my_entity.location)){ // && !(ship.location == target))) {
+                    if (!(ship.location == my_entity.location)){ // && !(ship.location == target))) 
                         const double tot_radius = my_entity.radius + ship.radius;
                         if (check_moving_collision(my_entity.location, ship.location, step, ship.thrust, tot_radius)) return true;
                     }
                 }
             }
+
+            if (
+                    target.pos_x - SHIP_RADIUS <= 0 ||
+                    target.pos_y - SHIP_RADIUS <= 0 ||
+                    target.pos_x + SHIP_RADIUS >= map.map_width ||
+                    target.pos_y + SHIP_RADIUS >= map.map_height
+               )
+            {
+                return true;
+            }
+                    
 
             return false;
         }
@@ -153,7 +165,7 @@ namespace hlt {
                     };
 
 
-                    if (!(avoid_obstacles && objects_between(map, ship.location, target, ship, step)) ) {
+                    if (!(avoid_obstacles && will_collide(map, ship.location, target, ship, step)) ) {
                         return { Move::thrust(ship.entity_id, thrust, angle_deg), true };
                     }
                 }
