@@ -4,9 +4,12 @@
 
 #define SQR(x) ((x)*(x))
 
+
+bool defending = false;
+
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("Bot 13");
+    const hlt::Metadata metadata = hlt::initialize("post Bot 13");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -30,6 +33,22 @@ int main() {
         std::vector<hlt::Move> moves;
 
         hlt::Map map = hlt::in::get_map();
+
+        int my_ships = map.ships[player_id].size();
+        int max_opponent_ships = 0;
+        for (auto& player_ship : map.ships) {
+            if (player_ship.first != player_id) {
+                max_opponent_ships = std::max(max_opponent_ships, (int) player_ship.second.size());
+            }
+        }
+        double ratio = (double)my_ships / (double) max_opponent_ships;
+
+        if (defending && ratio > 1.1) {
+            defending = false;
+        }
+        if (!defending && ratio < 0.9) {
+            defending = true;
+        }
 
 
         //for (const auto& myShip : map.ships[player_id]) {
@@ -72,7 +91,6 @@ int main() {
                 double docked = planet.docked_ships.size();
 
                 if (planet.owner_id == player_id || !planet.owned) {
-
                     docked += planet.targetted * 0.666;
                 }
                 else {
@@ -144,12 +162,6 @@ int main() {
                         if (enemy.docking_status == hlt::ShipDockingStatus::Undocked
                                 || enemy.docking_status == hlt::ShipDockingStatus::Undocking){
 
-                            /*
-                            if (enemy.distance_to_my_closest_planet >= distance_to_target_planet) {
-                                continue;
-                            }
-                            */
-
                             distance /= 5;
                             double weight = distance * distance;
                             int k = enemy.targetted;
@@ -159,11 +171,12 @@ int main() {
                             }
 
                             while(k!=0) {
-                                weight *= 0.7*(enemy.distance_to_my_closest_planet)/ distance_to_target_planet;
+                                if(defending) {
+                                    weight *= 0.7*(enemy.distance_to_my_closest_planet)/ distance_to_target_planet;
+                                }
                                 weight *= 1.5;
                                 k--;
                             }
-
 
 
                             if (weight < min_so_far) {
