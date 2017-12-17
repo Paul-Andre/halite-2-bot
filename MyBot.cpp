@@ -1,15 +1,18 @@
 #include "hlt/hlt.hpp"
 #include <cassert>
+#include <cmath>
 #include "hlt/navigation.hpp"
+#include "hlt/constants.hpp"
 
 #define SQR(x) ((x)*(x))
 
 
 bool defending = false;
+bool fleeing = false;
 
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("post Bot 13");
+    const hlt::Metadata metadata = hlt::initialize("post Bot 14 (fleeee)");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -27,8 +30,10 @@ int main() {
 
 
 
+    int time =0;
 
     for (;;) {
+        time ++;
 
         std::vector<hlt::Move> moves;
 
@@ -36,19 +41,82 @@ int main() {
 
         int my_ships = map.ships[player_id].size();
         int max_opponent_ships = 0;
+
         for (auto& player_ship : map.ships) {
             if (player_ship.first != player_id) {
                 max_opponent_ships = std::max(max_opponent_ships, (int) player_ship.second.size());
             }
         }
+
         double ratio = (double)my_ships / (double) max_opponent_ships;
 
-        if (defending && ratio > 1.1) {
+        if (defending && ratio > 1.2) {
             defending = false;
         }
-        if (!defending && ratio < 0.9) {
+        if (max_opponent_ships > 20 && !defending && ratio < 0.9) {
             defending = true;
         }
+
+
+        if (max_opponent_ships > 100 && ratio < 0.15) {
+            fleeing = true;
+            for ( hlt::Ship& ship : map.ships.at(player_id)) {
+                if (ship.docking_status == hlt::ShipDockingStatus::Docked) {
+                    moves.push_back(hlt::Move::undock(ship.entity_id));
+                }
+            }
+        }
+
+
+        if (fleeing) {
+            for ( hlt::Ship& ship : map.ships.at(player_id)) {
+                if (ship.docking_status != hlt::ShipDockingStatus::Undocked) {
+                    continue;
+                }
+
+                int dir = ship.entity_id % 2;
+                dir = dir*2 - 1;
+
+                const int max_corrections = 180;
+                const bool avoid_obstacles = true;
+                const double angular_step_rad = M_PI / 180.0;
+                double r = ship.entity_id + time*0.1*dir;
+
+                const hlt::Location& target = 
+                    ship.location +
+                    ((hlt::Location){ std::cos(r ),
+                      std::sin(r) }) * 40;
+
+                hlt::possibly<hlt::Move> move =
+                    hlt::navigation::navigate_ship_towards_target(
+                            map, ship, target,  7, avoid_obstacles, max_corrections, angular_step_rad, true);
+
+                if (!move.second) {
+                    move = 
+                        hlt::navigation::navigate_ship_towards_target(
+                                map, ship, target,  7, avoid_obstacles, max_corrections, angular_step_rad, false);
+                }
+
+                if (move.second) {
+                    moves.push_back(move.first);
+                    double angle_rad  = move.first.move_angle_deg * (M_PI * 2. /360.);
+                    double thrust = move.first.move_thrust;
+                    ship.thrust.pos_x = cos(angle_rad) * thrust;
+                    ship.thrust.pos_y = sin(angle_rad) * thrust;
+                    continue;
+                }
+            }
+
+        if (!hlt::out::send_moves(moves)) {
+            hlt::Log::log("send_moves failed; exiting");
+            break;
+        }
+            continue;
+        }
+
+                
+
+
 
 
         //for (const auto& myShip : map.ships[player_id]) {
@@ -169,6 +237,7 @@ int main() {
                             if (distance_to_target_planet != 10000) {
                                 weight *= 0.7*(enemy.distance_to_my_closest_planet)/ distance_to_target_planet;
                             }
+
 
                             while(k!=0) {
                                 if(defending) {

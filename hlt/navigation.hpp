@@ -55,25 +55,45 @@ namespace hlt {
 
 
             /*
-            int steps = 20;
+               int steps = 20;
 
-            dx *= (1./steps);
-            dy *= (1./steps);
+               dx *= (1./steps);
+               dy *= (1./steps);
 
-            for(int i=0; i<=steps; i++) {
-                if (x.get_distance_to(y) <= tot_radius + 0.01) {
-                    return true;
-                }
-                x += dx;
-                y += dy;
-            }
+               for(int i=0; i<=steps; i++) {
+               if (x.get_distance_to(y) <= tot_radius + 0.01) {
+               return true;
+               }
+               x += dx;
+               y += dy;
+               }
 
-            return false;
-            */
+               return false;
+             */
 
         }
 
+        static bool will_cross_enemy (
+                const Map& map,
+                const Location& start,
+                const Location& target,
+                const Entity& my_entity
+                ) 
+        {
 
+            for (const auto& player_ship : map.ships) {
+                if (player_ship.first != my_entity.owner_id) {
+                    for (const Ship& ship : player_ship.second) {
+
+                        if (ship.docking_status == hlt::ShipDockingStatus::Undocked &&
+                         check_moving_collision( start, ship.location, target - start, {0,0} , 17 )) return true;
+                    }
+                }
+            }
+
+
+            return false;
+        }
 
         static bool will_collide(
                 const Map& map,
@@ -114,7 +134,7 @@ namespace hlt {
             {
                 return true;
             }
-                    
+
 
             return false;
         }
@@ -126,7 +146,9 @@ namespace hlt {
                 const int max_thrust,
                 const bool avoid_obstacles,
                 const int max_corrections,
-                const double angular_step_rad)
+                const double angular_step_rad,
+                const bool avoid_enemies
+                )
         {
 
             const double distance = ship.location.get_distance_to(orig_target);
@@ -165,7 +187,9 @@ namespace hlt {
                     };
 
 
-                    if (!(avoid_obstacles && will_collide(map, ship.location, target, ship, step)) ) {
+                    if (!(avoid_obstacles && will_collide(map, ship.location, target, ship, step) )
+                            &&
+                            !(avoid_enemies && will_cross_enemy(map, ship.location, target, ship)))  {
                         return { Move::thrust(ship.entity_id, thrust, angle_deg), true };
                     }
                 }
@@ -186,7 +210,7 @@ namespace hlt {
             const Location& target = ship.location.get_closest_point(dock_target.location, dock_target.radius);
 
             return navigate_ship_towards_target(
-                    map, ship, target, max_thrust, avoid_obstacles, max_corrections, angular_step_rad);
+                    map, ship, target, max_thrust, avoid_obstacles, max_corrections, angular_step_rad, false);
         }
     }
 }
