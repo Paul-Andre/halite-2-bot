@@ -12,7 +12,7 @@ bool fleeing = false;
 
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("bot 16 (tweeks)");
+    const hlt::Metadata metadata = hlt::initialize("bot 17 (back to same)");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -53,9 +53,9 @@ int main() {
         if (defending && ratio > 1.2) {
             defending = false;
         }
+
         if (
-                (max_opponent_ships > 20 && !defending && ratio < 0.8 ) ||
-                (max_opponent_ships > 40 && !defending && ratio < 0.9 )
+                (max_opponent_ships > 20 && !defending && ratio < 0.9 )
         )
         {
             defending = true;
