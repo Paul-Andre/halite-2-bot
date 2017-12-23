@@ -12,7 +12,7 @@ bool fleeing = false;
 
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("bot 17 (back to same)");
+    const hlt::Metadata metadata = hlt::initialize("post bot 17 (attack other planets)");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -179,7 +179,14 @@ int main() {
                 double weight = distance;
 
                 if (planet.owned && planet.owner_id != player_id) {
-                    weight += docked*4./7. + weight*docked*(1./12.)*4;
+
+                    if(weight/7. < 12./docked) {
+                        weight *= 0.5;
+                    }
+
+                    weight = weight*0.8 +  //arbitrary number
+                        docked*4./7. + weight*docked*(1./12.)*4;
+
                 }
                 else {
                     weight *= 1 + ((double)docked/planet.docking_spots);
