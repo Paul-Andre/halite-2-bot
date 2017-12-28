@@ -29,11 +29,11 @@ namespace hlt {
         int planning_to_defend = 0;
 
         // Create a gaussian forcefield around undocked enemy ships
-        double close_field[4];
-        Location close_field_gradient[4];
+        double close_field[4] = {};
+        Location close_field_gradient[4] = {};
 
-        double medium_field[4];
-        Location medium_field_gradient[4];
+        double medium_field[4] = {};
+        Location medium_field_gradient[4] = {};
 
 
         bool is_full() const {

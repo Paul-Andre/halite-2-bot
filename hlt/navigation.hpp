@@ -22,7 +22,7 @@ namespace hlt {
             }
 
             if (entity_to_check.thrust == Location({0,0})) {
-                if (collision::segment_circle_intersect(start, target, entity_to_check, constants::FORECAST_FUDGE_FACTOR)) {
+                if (collision::segment_circle_intersect(start, target, entity_to_check, my_entity.radius + 1e-10)) {
                     return true;
                 }
             }
@@ -119,17 +119,17 @@ namespace hlt {
             for (const auto& player_ship : map.ships) {
                 for (const Ship& ship : player_ship.second) {
                     if (!(ship.location == my_entity.location)){ // && !(ship.location == target))) 
-                        const double tot_radius = my_entity.radius + ship.radius;
+                        const double tot_radius = my_entity.radius + ship.radius + 1e-10;
                         if (check_moving_collision(my_entity.location, ship.location, step, ship.thrust, tot_radius)) return true;
                     }
                 }
             }
 
             if (
-                    target.pos_x - SHIP_RADIUS <= 0 ||
-                    target.pos_y - SHIP_RADIUS <= 0 ||
-                    target.pos_x + SHIP_RADIUS >= map.map_width ||
-                    target.pos_y + SHIP_RADIUS >= map.map_height
+                    target.pos_x - my_entity.radius <= 0 ||
+                    target.pos_y - my_entity.radius <= 0 ||
+                    target.pos_x + my_entity.radius >= map.map_width ||
+                    target.pos_y + my_entity.radius >= map.map_height
                )
             {
                 return true;

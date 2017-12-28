@@ -24,11 +24,17 @@ namespace hlt {
 
 
         // Create a gaussian forcefield around undocked enemy ships
-        double close_field[4];
-        Location close_field_gradient[4];
+        double close_field[4] = {0};
+        Location close_field_gradient[4] = {};
 
-        double medium_field[4];
-        Location medium_field_gradient[4];
+        double medium_field[4] = {0};
+        Location medium_field_gradient[4] = {};
+
+        double close_field_health[4] = {0};
+        Location close_field_health_gradient[4] = {};
+
+        double medium_field_health[4] = {0};
+        Location medium_field_health_gradient[4] = {};
 
 
         double threat;
