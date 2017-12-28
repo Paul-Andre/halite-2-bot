@@ -1,8 +1,16 @@
 #include "hlt/hlt.hpp"
 #include <cassert>
+#include <vector>
 #include <cmath>
 #include "hlt/navigation.hpp"
 #include "hlt/constants.hpp"
+#include "hlt/gaussian.hpp"
+#include <utility>
+
+using std::pair;
+using std::vector;
+
+using namespace hlt;
 
 #define SQR(x) ((x)*(x))
 
@@ -12,7 +20,7 @@ bool fleeing = false;
 
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("post bot 17 (attack other planets)");
+    const hlt::Metadata metadata = hlt::initialize("post 19 (gaussians)");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -39,6 +47,12 @@ int main() {
 
         hlt::Map map = hlt::in::get_map();
 
+
+
+
+        // Count ships and decide modes
+
+
         int my_ships = map.ships[player_id].size();
         int max_opponent_ships = 0;
 
@@ -62,7 +76,8 @@ int main() {
         }
 
 
-        if (max_opponent_ships > 75 && ratio < 0.15) {
+        if (max_opponent_ships > 75 && ratio < 0.15) 
+        {
             fleeing = true;
             for ( hlt::Ship& ship : map.ships.at(player_id)) {
                 if (ship.docking_status == hlt::ShipDockingStatus::Docked) {
@@ -72,34 +87,103 @@ int main() {
         }
 
 
+
+
+        // Calculate gradients!!!!
+
+        for (pair<const hlt::PlayerId, vector<hlt::Ship>>& player_ships_1 : map.ships) {
+
+
+            vector<Ship> &ships_1 = player_ships_1.second;
+
+            for(int i=0; i<ships_1.size(); i++) {
+
+
+                hlt::Ship &ship_1 = ships_1[i];
+
+
+                for (pair<const hlt::PlayerId, vector<hlt::Ship>>& player_ships_2 : map.ships) {
+
+                    
+                    vector<Ship> &ships_2 = player_ships_2.second;
+                    for(int j=0; j<ships_2.size(); j++) {
+
+
+                        hlt::Ship &ship_2= ships_2[j];
+
+                        if (&ship_1 != &ship_2 && ship_2.docking_status == hlt::ShipDockingStatus::Undocked) {
+                            
+
+                                Location vec = ship_1.location - ship_2.location;
+
+                                pair<double, Location> close_value_gradient =
+                                    gaussian::value_and_gradient(1. / SQR(5.), vec);
+
+                                pair<double, Location> medium_value_gradient =
+                                    gaussian::value_and_gradient(1. / SQR(15.), vec);
+
+
+                                ship_1.close_field[player_ships_2.first] += close_value_gradient.first;
+                                ship_1.close_field_gradient[player_ships_2.first] += close_value_gradient.second;
+
+                                ship_1.medium_field[player_ships_2.first] += medium_value_gradient.first;
+                                ship_1.medium_field_gradient[player_ships_2.first] += medium_value_gradient.second;
+
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+
         if (fleeing) {
+
+            {
+                std::ostringstream ss;
+                ss << "Fleeing\n";
+                hlt::Log::log(ss.str());
+            }
+
             for ( hlt::Ship& ship : map.ships.at(player_id)) {
+
                 if (ship.docking_status != hlt::ShipDockingStatus::Undocked) {
                     continue;
                 }
 
-                int dir = ship.entity_id % 2;
-                dir = dir*2 - 1;
+
+                Location totalGradient = {0.,0.};
+
+                for(int i=0;i< map.ships.size(); i++) {
+                    if (i != player_id) {
+                        totalGradient += ship.medium_field_gradient[i];
+                    }
+                }
+
+
+
+                if (!(totalGradient == Location({0.,0.}))) {
+                    totalGradient *= 1./totalGradient.norm();
+                    totalGradient *= -7;
+                }
+
+                std::ostringstream ss;
+                ss << "Ship " << ship.entity_id << " is " << totalGradient.pos_x << " " <<totalGradient.pos_y << std::endl;
+                hlt::Log::log(ss.str());
+
+
+                 const hlt::Location& target = 
+                    ship.location + totalGradient;
+
 
                 const int max_corrections = 180;
                 const bool avoid_obstacles = true;
-                const double angular_step_rad = M_PI / 180.0;
-                double r = ship.entity_id + time*0.1*dir;
-
-                const hlt::Location& target = 
-                    ship.location +
-                    ((hlt::Location){ std::cos(r ),
-                      std::sin(r) }) * 40;
+                const double angular_step_rad = M_PI/ 180.;
 
                 hlt::possibly<hlt::Move> move =
-                    hlt::navigation::navigate_ship_towards_target(
-                            map, ship, target,  7, avoid_obstacles, max_corrections, angular_step_rad, true);
-
-                if (!move.second) {
-                    move = 
                         hlt::navigation::navigate_ship_towards_target(
                                 map, ship, target,  7, avoid_obstacles, max_corrections, angular_step_rad, false);
-                }
 
                 if (move.second) {
                     moves.push_back(move.first);

@@ -23,6 +23,14 @@ namespace hlt {
         double distance_to_my_closest_planet = 10000;
 
 
+        // Create a gaussian forcefield around undocked enemy ships
+        double close_field[4];
+        Location close_field_gradient[4];
+
+        double medium_field[4];
+        Location medium_field_gradient[4];
+
+
         double threat;
 
         // What planets the enimy ship might be planning to attack

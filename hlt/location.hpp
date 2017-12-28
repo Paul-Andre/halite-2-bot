@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ostream>
+#include <cmath>
 
 #include "constants.hpp"
 #include "util.hpp"
@@ -42,6 +43,9 @@ namespace hlt {
             return out;
         }
 
+        double norm() const {
+            return sqrt( pos_x*pos_x + pos_y*pos_y );
+        }
 
         double get_distance_to(const Location& target) const {
             const double dx = pos_x - target.pos_x;

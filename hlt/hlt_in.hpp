@@ -2,8 +2,12 @@
 
 #include <sstream>
 #include <iostream>
+#include <stdio.h>
+#include <string.h>
 
 #include "map.hpp"
+
+#define CLEAR_ARRAY(A) memset(A, 0, sizeof(A))
 
 namespace hlt {
     namespace in {
@@ -20,6 +24,11 @@ namespace hlt {
             iss >> ship.location.pos_x;
             iss >> ship.location.pos_y;
             iss >> ship.health;
+
+            CLEAR_ARRAY(ship.close_field);
+            CLEAR_ARRAY(ship.close_field_gradient);
+            CLEAR_ARRAY(ship.medium_field);
+            CLEAR_ARRAY(ship.medium_field_gradient);
 
             // No longer in the game, but still part of protocol.
             double vel_x_deprecated, vel_y_deprecated;
