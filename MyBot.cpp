@@ -111,7 +111,7 @@ int main() {
 
                         hlt::Ship &ship_2= ships_2[j];
 
-                        if (&ship_1 != &ship_2 && ship_2.docking_status == hlt::ShipDockingStatus::Undocked) {
+                        if (ship_2.docking_status == hlt::ShipDockingStatus::Undocked) {
                             
 
                                 Location vec = ship_1.location - ship_2.location;
@@ -134,6 +134,43 @@ int main() {
                 }
             }
         }
+
+        for (int i=0; i<map.planets.size(); i++) {
+            Planet & planet = map.planets[i];
+
+            for (pair<const hlt::PlayerId, vector<hlt::Ship>>& player_ships_2 : map.ships) {
+
+
+                vector<Ship> &ships_2 = player_ships_2.second;
+                for(int j=0; j<ships_2.size(); j++) {
+
+
+                    hlt::Ship &ship_2= ships_2[j];
+
+                    if (ship_2.docking_status == hlt::ShipDockingStatus::Undocked) {
+
+
+                        Location vec = planet.location - ship_2.location;
+
+                        pair<double, Location> close_value_gradient =
+                            gaussian::value_and_gradient(1. / SQR(5.), vec);
+
+                        pair<double, Location> medium_value_gradient =
+                            gaussian::value_and_gradient(1. / SQR(15.), vec);
+
+
+                        planet.close_field[player_ships_2.first] += close_value_gradient.first;
+                        planet.close_field_gradient[player_ships_2.first] += close_value_gradient.second;
+
+                        planet.medium_field[player_ships_2.first] += medium_value_gradient.first;
+                        planet.medium_field_gradient[player_ships_2.first] += medium_value_gradient.second;
+
+                    }
+                }
+            }
+        }
+
+
 
 
 
@@ -264,16 +301,56 @@ int main() {
 
                 if (planet.owned && planet.owner_id != player_id) {
 
-                    if(weight/7. < 12./docked) {
+                    double cumul_protection = 0;
+
+                    int docked_ships = 0;
+                    for(int i=0; i<planet.docked_ships.size(); i++) {
+                        Ship &docked_ship = map.get_ship(planet.owner_id, planet.docked_ships[i]);
+                        cumul_protection += docked_ship.medium_field[planet.owner_id];
+                        if (docked_ship.docking_status == hlt::ShipDockingStatus::Docked) {
+                            docked_ships ++;
+                        }
+                    }
+
+                    double total_protection = cumul_protection / planet.docked_ships.size();
+
+                    weight += (docked*4./7. + weight*docked*(1./12.)*4) * total_protection * 0.03;
+
+                    /*
+ if(weight/7. < 12./docked) {
                         weight *= 0.5;
                     }
 
                     weight = weight*0.8 +  //arbitrary number
                         docked*4./7. + weight*docked*(1./12.)*4;
+                        */
+
 
                 }
                 else {
+                    
+                    double threat = 0;
+
+                    for(int i=0;i< map.ships.size(); i++) {
+                        if (i != player_id) {
+                            threat += planet.medium_field[i];
+                        }
+                    }
+
+                    //threat -= planet.medium_field[player_id];
+
+
+                    //threat /= map.ships[player_id].size();
+                    
                     weight *= 1 + ((double)docked/planet.docking_spots);
+
+                    /*
+                    if (!planet.targetted && planet.docked_ships.size() == 0 && threat > 1) {
+                        //weight *= (1 + threat * 0.5);
+                        continue;
+                    }
+                    */
+
                 }
 
                 if (planet.owner_id != player_id || !planet.is_full()){
@@ -354,18 +431,82 @@ int main() {
 
 
             if (ship_ptr != nullptr) {
-                const hlt::possibly<hlt::Move> move =
-                    hlt::navigation::navigate_ship_to_dock(map, ship, *ship_ptr, hlt::constants::MAX_SPEED);
 
-                if (move.second) {
-                    moves.push_back(move.first);
-                    ship_ptr -> targetted ++;
+                bool go_straight = true;
+
+
+                if ( ship_ptr -> location.get_distance_to ( ship.location ) < 12) {
+
+                    /*
+                    Location close_enemy_gradient = {0.,0.};
+                    Location medium_enemy_gradient = {0.,0.};
+
+                    double close_field = 0;
+                    double medium_field = 0;
+
+                    for(int i=0;i< map.ships.size(); i++) {
+                        if (i != player_id) {
+                            close_field += ship.close_field[i];
+                            medium_field += ship.medium_field[i];
+                            close_enemy_gradient += ship.close_field_gradient[i];
+                            medium_enemy_gradient += ship.medium_field_gradient[i];
+                        }
+                    }
+                    */
+
+                    if (ship_ptr->close_field[ship_ptr->owner_id] > ship.close_field[player_id] ) {
+
+                        go_straight = false;
+
+                        Location gradient = ship.medium_field_gradient[player_id];
+
+
+
+                            if (!(gradient == Location({0.,0.}))) {
+                                gradient *= 1./gradient.norm();
+                                gradient *= 7;
+                            }
+
+                        const hlt::Location& target = 
+                            ship.location + gradient;
+
+
+                        const int max_corrections = 180;
+                        const bool avoid_obstacles = true;
+                        const double angular_step_rad = M_PI/ 180.;
+
+                        hlt::possibly<hlt::Move> move =
+                            hlt::navigation::navigate_ship_towards_target(
+                                    map, ship, target,  7, avoid_obstacles, max_corrections, angular_step_rad, false);
+
+                        if (move.second) {
+                            moves.push_back(move.first);
+                            double angle_rad  = move.first.move_angle_deg * (M_PI * 2. /360.);
+                            double thrust = move.first.move_thrust;
+                            ship.thrust.pos_x = cos(angle_rad) * thrust;
+                            ship.thrust.pos_y = sin(angle_rad) * thrust;
+                            continue;
+                        }
+                    }
+                }
+
+                if ( go_straight) {
+
+                    const hlt::possibly<hlt::Move> move =
+                        hlt::navigation::navigate_ship_to_dock(map, ship, *ship_ptr, hlt::constants::MAX_SPEED);
+
+                    if (move.second) {
+                        moves.push_back(move.first);
+                        ship_ptr -> targetted ++;
                         double angle_rad  = move.first.move_angle_deg * (M_PI * 2. /360.);
                         double thrust = move.first.move_thrust;
                         ship.thrust.pos_x = cos(angle_rad) * thrust;
                         ship.thrust.pos_y = sin(angle_rad) * thrust;
-                    continue;
+                        continue;
+                    }
+
                 }
+
             }
 
 
