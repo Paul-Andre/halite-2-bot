@@ -1,6 +1,6 @@
 #pragma once
 
-#include "hlt/location.hpp"
+#include "location.hpp"
 #include <cmath>
 #include <utility>
 using std::pair;

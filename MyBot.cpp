@@ -20,7 +20,7 @@ bool fleeing = false;
 
 int main() {
 
-    const hlt::Metadata metadata = hlt::initialize("post 19 (gaussians)");
+    const hlt::Metadata metadata = hlt::initialize("p-a 20");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
