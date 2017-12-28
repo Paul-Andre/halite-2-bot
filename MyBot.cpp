@@ -29,7 +29,7 @@ int main() {
 
     srand(time(nullptr));
 
-    const hlt::Metadata metadata = hlt::initialize("21 (rushing)");
+    const hlt::Metadata metadata = hlt::initialize("22 quick resub");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -481,11 +481,11 @@ int main() {
                          */
 
                         if (
-                                ship_ptr->close_field_health[ship_ptr->owner_id]
-                                //ship_ptr->close_field[ship_ptr->owner_id]
+                                //ship_ptr->close_field_health[ship_ptr->owner_id]
+                                ship_ptr->close_field[ship_ptr->owner_id]
                                 >
-                                ship.close_field_health[player_id]
-                                //ship.close_field[player_id]
+                                //ship.close_field_health[player_id]
+                                ship.close_field[player_id]
                            ) {
 
                             go_straight = false;
