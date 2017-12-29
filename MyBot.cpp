@@ -25,6 +25,7 @@ Ship rushor;
 vector<bool> is_planet_in_center;
 
 
+
 int main() {
 
     srand(time(nullptr));
@@ -620,58 +621,59 @@ int main() {
                 }
             }
 
-            if (map.ships.size() == 2 && time == 1 && (number_going_to_center >= 2 ||
-                        (number_going_to_center == 1 && rand()%2 == 0))) {
+            if (map.ships.size() == 2 && time == 1) {
 
-                moves.clear();
+                int max_targetted = 0;
 
-                // Put ships in special formation
-
-                vector<pair<double, EntityId> > v;
-
-                for(int i=0; i<3; i++) {
-                    v.emplace_back(map.ships[player_id][i].location.pos_y, map.ships[player_id][i].entity_id);
-                }
-                sort(v.begin(), v.end());
-
-                rushing = true;
-
-                rushor.location = map.get_ship(player_id, v[1].second).location;
-                rushor.radius = 1.2;
-                rushor.entity_id = -1;
-
-                if (map.ships[player_id][0].location.pos_y  < map.map_height * 0.5) {
-
-                    moves.push_back( Move::thrust(v[0].second, 6, 113) );
-                    moves.push_back( Move::thrust(v[1].second, 3, 116) );
-                    moves.push_back( Move::thrust(v[2].second, 2, 166) );
-                    rushor.location += Location({-1.6887, 2.90109});
-                }
-                else {
-                    moves.push_back( Move::thrust(v[2].second, 6, 113+180) );
-                    moves.push_back( Move::thrust(v[1].second, 3, 116+180) );
-                    moves.push_back( Move::thrust(v[0].second, 2, 166+180) );
-                    rushor.location += Location({1.6887, -2.90109});
+                for(int i=0; i<map.planets.size(); i++) {
+                    max_targetted = max(max_targetted, map.planets[i].targetted);
                 }
 
+                if (
+                        (number_going_to_center >= 2 ||
+                         (number_going_to_center == 1 && max_targetted == 1))) {
 
-                if (!hlt::out::send_moves(moves)) {
-                    hlt::Log::log("send_moves failed; exiting");
-                    break;
+                    moves.clear();
+
+                    // Put ships in special formation
+
+                    vector<pair<double, EntityId> > v;
+
+                    for(int i=0; i<3; i++) {
+                        v.emplace_back(map.ships[player_id][i].location.pos_y, map.ships[player_id][i].entity_id);
+                    }
+                    sort(v.begin(), v.end());
+
+                    rushing = true;
+
+                    rushor.location = map.get_ship(player_id, v[1].second).location;
+                    rushor.radius = 1.2;
+                    rushor.entity_id = -1;
+
+                    if (map.ships[player_id][0].location.pos_y  < map.map_height * 0.5) {
+
+                        moves.push_back( Move::thrust(v[0].second, 6, 113) );
+                        moves.push_back( Move::thrust(v[1].second, 3, 116) );
+                        moves.push_back( Move::thrust(v[2].second, 2, 166) );
+                        rushor.location += Location({-1.6887, 2.90109});
+                    }
+                    else {
+                        moves.push_back( Move::thrust(v[2].second, 6, 113+180) );
+                        moves.push_back( Move::thrust(v[1].second, 3, 116+180) );
+                        moves.push_back( Move::thrust(v[0].second, 2, 166+180) );
+                        rushor.location += Location({1.6887, -2.90109});
+                    }
+
+
                 }
-                continue;
-
-
             }
-            else {
 
-                if (!hlt::out::send_moves(moves)) {
-                    hlt::Log::log("send_moves failed; exiting");
-                    break;
-                }
-
-                continue;
+            if (!hlt::out::send_moves(moves)) {
+                hlt::Log::log("send_moves failed; exiting");
+                break;
             }
+
+            continue;
         }
         // Else rushing
         else {
