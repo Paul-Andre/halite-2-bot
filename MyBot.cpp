@@ -20,17 +20,21 @@ bool defending = false;
 bool fleeing = false;
 bool rushing = false;
 
+bool naive_rushing = false;
+
 Ship rushor;
 
 vector<bool> is_planet_in_center;
 
+#define close_std_dev 5.
+#define medium_std_dev 15.
 
 
 int main() {
 
     srand(time(nullptr));
 
-    const hlt::Metadata metadata = hlt::initialize("22 quick resub");
+    const hlt::Metadata metadata = hlt::initialize("post 22");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -152,10 +156,10 @@ int main() {
                                 Location vec = ship_1.location - ship_2.location;
 
                                 pair<double, Location> close_value_gradient =
-                                    gaussian::value_and_gradient(1. / SQR(5.), vec);
+                                    gaussian::value_and_gradient(1. / SQR(close_std_dev), vec);
 
                                 pair<double, Location> medium_value_gradient =
-                                    gaussian::value_and_gradient(1. / SQR(15.), vec);
+                                    gaussian::value_and_gradient(1. / SQR(medium_std_dev), vec);
 
 
                                 ship_1.close_field[player_ships_2.first] += close_value_gradient.first;
@@ -193,10 +197,10 @@ int main() {
                         Location vec = planet.location - ship_2.location;
 
                         pair<double, Location> close_value_gradient =
-                            gaussian::value_and_gradient(1. / SQR(5.), vec);
+                            gaussian::value_and_gradient(1. / SQR(close_std_dev), vec);
 
                         pair<double, Location> medium_value_gradient =
-                            gaussian::value_and_gradient(1. / SQR(15.), vec);
+                            gaussian::value_and_gradient(1. / SQR(medium_std_dev), vec);
 
 
                         planet.close_field[player_ships_2.first] += close_value_gradient.first;
@@ -318,6 +322,7 @@ int main() {
 
                 hlt::Planet *target_planet_ptr = nullptr;
 
+                if (!naive_rushing)
                 for( int i = 0; i<map.planets.size(); i++) {
 
 
@@ -425,8 +430,8 @@ int main() {
 
                             double distance = ship.location.get_distance_to(enemy.location);
 
-                            if (enemy.docking_status == hlt::ShipDockingStatus::Undocked
-                                    || enemy.docking_status == hlt::ShipDockingStatus::Undocking){
+                            if (naive_rushing || (enemy.docking_status == hlt::ShipDockingStatus::Undocked
+                                    || enemy.docking_status == hlt::ShipDockingStatus::Undocking)){
 
                                 distance /= 5;
                                 double weight = distance * distance;
@@ -517,6 +522,10 @@ int main() {
                                 gradient *= 1./gradient.norm();
                                 gradient *= 7.;
                             }
+                            else {
+                                gradient = diff * -1.;
+                            }
+
 
                             const hlt::Location& target = 
                                 ship.location + gradient;
@@ -621,7 +630,7 @@ int main() {
                 }
             }
 
-            if (map.ships.size() == 2 && time == 1) {
+            if (map.ships.size() == 2 && time == 1 && !naive_rushing) {
 
                 int max_targetted = 0;
 

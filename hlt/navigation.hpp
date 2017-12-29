@@ -204,7 +204,7 @@ namespace hlt {
                 const Entity& dock_target,
                 const int max_thrust)
         {
-            const int max_corrections = constants::MAX_NAVIGATION_CORRECTIONS;
+            const int max_corrections = 135;
             const bool avoid_obstacles = true;
             const double angular_step_rad = M_PI / 180.0;
             const Location& target = ship.location.get_closest_point(dock_target.location, dock_target.radius);
