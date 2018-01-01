@@ -20,14 +20,34 @@ bool defending = false;
 bool fleeing = false;
 bool rushing = false;
 
+bool always_rushing = true;
 bool naive_rushing = false;
 
-Ship rushor;
+Ship rusher;
 
 vector<bool> is_planet_in_center;
 
 #define close_std_dev 5.
 #define medium_std_dev 15.
+
+
+        int number_going_to_center = 0;
+        
+bool should_rush(Map &map) {
+
+
+    if (always_rushing) return true;
+
+    int max_targetted = 0;
+
+    for(int i=0; i<map.planets.size(); i++) {
+        max_targetted = max(max_targetted, map.planets[i].targetted);
+    }
+
+    return map.ships.size() == 2 && ( 
+    number_going_to_center >= 2 || (number_going_to_center == 1 && max_targetted == 1) );
+}
+
 
 
 int main() {
@@ -309,7 +329,6 @@ int main() {
             }
         }
                             
-        int number_going_to_center = 0;
 
         if (!rushing) {
             for ( hlt::Ship& ship : map.ships.at(player_id)) {
@@ -630,51 +649,64 @@ int main() {
                 }
             }
 
-            if (map.ships.size() == 2 && time == 1 && !naive_rushing) {
+            if (time == 1 &&  should_rush(map)) {
 
-                int max_targetted = 0;
 
-                for(int i=0; i<map.planets.size(); i++) {
-                    max_targetted = max(max_targetted, map.planets[i].targetted);
+                moves.clear();
+
+                // Put ships in special formation
+
+                vector<pair<double, EntityId> > v;
+
+                for(int i=0; i<3; i++) {
+                    v.emplace_back(map.ships[player_id][i].location.pos_y, map.ships[player_id][i].entity_id);
                 }
+                sort(v.begin(), v.end());
 
-                if (
-                        (number_going_to_center >= 2 ||
-                         (number_going_to_center == 1 && max_targetted == 1))) {
+                rushing = true;
 
-                    moves.clear();
+                rusher.location = map.get_ship(player_id, v[1].second).location;
+                rusher.radius = 1.2;
+                rusher.entity_id = -1;
 
-                    // Put ships in special formation
+                if (map.ships[player_id][1].location.pos_y  < map.map_height * 0.333) {
 
-                    vector<pair<double, EntityId> > v;
+                    if (map.ships[player_id][1].location.pos_x < map.map_width * 0.333) {
 
-                    for(int i=0; i<3; i++) {
-                        v.emplace_back(map.ships[player_id][i].location.pos_y, map.ships[player_id][i].entity_id);
+                        moves.push_back( Move::thrust(v[0].second, 6, 180 - 113) );
+                        moves.push_back( Move::thrust(v[1].second, 3, 180 - 116) );
+                        moves.push_back( Move::thrust(v[2].second, 2, 180 - 166) );
+                        rusher.location += Location({ 1.6887, 2.90109});
+
                     }
-                    sort(v.begin(), v.end());
-
-                    rushing = true;
-
-                    rushor.location = map.get_ship(player_id, v[1].second).location;
-                    rushor.radius = 1.2;
-                    rushor.entity_id = -1;
-
-                    if (map.ships[player_id][0].location.pos_y  < map.map_height * 0.5) {
+                    else {
 
                         moves.push_back( Move::thrust(v[0].second, 6, 113) );
                         moves.push_back( Move::thrust(v[1].second, 3, 116) );
                         moves.push_back( Move::thrust(v[2].second, 2, 166) );
-                        rushor.location += Location({-1.6887, 2.90109});
+                        rusher.location += Location({-1.6887, 2.90109});
+
+                    }
+                }
+                else {
+                    if (map.ships[player_id][1].location.pos_x < map.map_width * 0.333) {
+
+                        moves.push_back( Move::thrust(v[2].second, 6, 180 + 113) );
+                        moves.push_back( Move::thrust(v[1].second, 3, 180 + 116) );
+                        moves.push_back( Move::thrust(v[0].second, 2, 180 + 166) );
+                        rusher.location += Location({1.6887, -2.90109});
+
                     }
                     else {
-                        moves.push_back( Move::thrust(v[2].second, 6, 113+180) );
-                        moves.push_back( Move::thrust(v[1].second, 3, 116+180) );
-                        moves.push_back( Move::thrust(v[0].second, 2, 166+180) );
-                        rushor.location += Location({1.6887, -2.90109});
+
+                        moves.push_back( Move::thrust(v[2].second, 6, 360 - 113) );
+                        moves.push_back( Move::thrust(v[1].second, 3, 360 - 116) );
+                        moves.push_back( Move::thrust(v[0].second, 2, 360 - 166) );
+                        rusher.location += Location({-1.6887, -2.90109});
+
                     }
-
-
                 }
+
             }
 
             if (!hlt::out::send_moves(moves)) {
@@ -693,6 +725,7 @@ int main() {
 
             auto it = map.ships.begin();
 
+
             for(; it != map.ships.end(); it++) {
 
                 if(it->first != player_id) {
@@ -703,11 +736,8 @@ int main() {
 
                         hlt::Ship &enemy = v[i];
 
-                        double distance = rushor.location.get_distance_to(enemy.location);
-
+                        double distance = rusher.location.get_distance_to(enemy.location);
                         double weight = distance;
-
-
                         if (enemy.docking_status != hlt::ShipDockingStatus::Undocked) {
                             Planet &planet = map.get_planet( enemy.docked_planet );
                             for(int i=0; i<planet.docked_ships.size(); i++) {
@@ -722,6 +752,8 @@ int main() {
                     }
                 }
             }
+
+
             assert( ship_ptr != nullptr);
 
             hlt::Ship &enemy = *ship_ptr;
@@ -732,7 +764,7 @@ int main() {
             map.ships[player_id].clear();
 
             const hlt::possibly<hlt::Move> move =
-                hlt::navigation::navigate_ship_to_dock(map, rushor, enemy, hlt::constants::MAX_SPEED);
+                hlt::navigation::navigate_ship_to_dock(map, rusher, enemy, hlt::constants::MAX_SPEED);
 
             if (move.second) {
                 for(size_t i=0; i<wew.size(); i++) {
@@ -743,8 +775,8 @@ int main() {
 
                 double angle_rad  = move.first.move_angle_deg * (M_PI * 2. /360.);
                 double thrust = move.first.move_thrust;
-                rushor.location.pos_x += cos(angle_rad) * thrust;
-                rushor.location.pos_y += sin(angle_rad) * thrust;
+                rusher.location.pos_x += cos(angle_rad) * thrust;
+                rusher.location.pos_y += sin(angle_rad) * thrust;
 
                 //ship_ptr -> targetted ++;
             }
