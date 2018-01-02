@@ -108,10 +108,14 @@ void remove_ships_that_will_die(Map &map) {
     }
 
 
+    // This part is removed because it works better that way
     /*
     for(int i=0; i<ships.size(); i++) {
         for(int ii=0; ii<ships[i].size(); ii++) {
-            if (ships[i][ii].health < 0) {
+            // Right now I'm just removing the undocked planets for simplicity
+            // TODO: go over all planets and remove the ships that would be dead
+            if (ships[i][ii].health < 0 &&
+                    ships[i][ii].docking_status == ShipDockingStatus::Undocked) {
                 ships[i][ii] = ships[i].back();
                 map.ship_map[i].erase(ships[i][ii].entity_id);
                 ships[i].pop_back();
@@ -123,7 +127,8 @@ void remove_ships_that_will_die(Map &map) {
         }
     }
     */
-    // TODO: go over all planets and remove the ships that would be dead
+
+
 }
 
 
@@ -132,7 +137,7 @@ int main() {
 
     srand(time(nullptr));
 
-    const hlt::Metadata metadata = hlt::initialize("post 22");
+    const hlt::Metadata metadata = hlt::initialize("23");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
