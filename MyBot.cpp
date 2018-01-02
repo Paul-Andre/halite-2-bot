@@ -49,6 +49,68 @@ bool should_rush(Map &map) {
 }
 
 
+void remove_ships_that_will_die(Map &map) {
+
+    // now I quadratically iterate over everything because it's the easiest thing at this stage
+
+    for(int i=0; i<ships.size(); i++) {
+        for(int j=0; j<ships.size(); j++) {
+            if (i == j) continue;
+            for(int ii=0; ii<ships[i].size(); ii++) {
+                for(int jj=0; jj<ships[j].size(); jj++) {
+
+                    Ship &ship1 = ships[i][ii];
+                    Ship &ship2 = ships[j][jj];
+
+                    double dist = ship1.location.get_distance_to(ship2.location);
+
+                    if (dist <= constants::WEAPON_RADIUS) {
+                        ship1.hitting ++;
+                        ship2.hitting ++;
+                    }
+                }
+            }
+        }
+    }
+
+    for(int i=0; i<ships.size(); i++) {
+        for(int j=0; j<ships.size(); j++) {
+            if (i == j) continue;
+            for(int ii=0; ii<ships[i].size(); ii++) {
+                for(int jj=0; jj<ships[j].size(); jj++) {
+
+                    Ship &ship1 = ships[i][ii];
+                    Ship &ship2 = ships[j][jj];
+
+                    double dist = ship1.location.get_distance_to(ship2.location);
+
+                    if (dist <= constants::WEAPON_RADIUS) {
+                        ship1.health -= (double)constants::WEAPON_DAMAGE / ship2.hitting
+                        ship2.health -= (double)constants::WEAPON_DAMAGE / ship1.hitting
+                    }
+                }
+            }
+        }
+    }
+
+
+    for(int i=0; i<ships.size(); i++) {
+        for(int ii=0; ii<ships[i].size(); ii++) {
+            if (ships[i][ii].health < 0) {
+                ships[i][ii] = ships[i].back();
+                map.ship_map[i].remove(ship[i][ii].entity_id);
+                ships.pop_back();
+                if (ii < ships[i].size()) {
+                    map.ship_map[i][ship[i][ii].entity_id] = ii;
+                }
+                ii --;
+            }
+        }
+    }
+
+}
+
+
 
 int main() {
 
@@ -106,7 +168,7 @@ int main() {
         hlt::Map map = hlt::in::get_map();
 
 
-
+        remove_ships_that_will_die(map);
 
 
         // Count ships and decide modes
@@ -488,46 +550,17 @@ int main() {
 
                     if ( dist < 12 ) {
 
-                        /*
-                           Location close_enemy_gradient = {0.,0.};
-                           Location medium_enemy_gradient = {0.,0.};
 
-                           double close_field = 0;
-                           double medium_field = 0;
-
-                           for(int i=0;i< map.ships.size(); i++) {
-                           if (i != player_id) {
-                           close_field += ship.close_field[i];
-                           medium_field += ship.medium_field[i];
-                           close_enemy_gradient += ship.close_field_gradient[i];
-                           medium_enemy_gradient += ship.medium_field_gradient[i];
-                           }
-                           }
-                         */
 
                         if (
-                                //ship_ptr->close_field_health[ship_ptr->owner_id]
                                 ship_ptr->close_field[ship_ptr->owner_id]
                                 >
-                                //ship.close_field_health[player_id]
                                 ship.close_field[player_id]
                            ) {
 
                             go_straight = false;
 
-                            Location gradient = 
-                                ship.medium_field_gradient[player_id]
-                                //+ ship.close_field_health_gradient[player_id]
-                                //+ (ship.close_field_health_gradient[ship_ptr->owner_id]
-                                //+ ship.close_field_gradient[ship_ptr->owner_id] * -0.75 ) * 2; 
-                                ;
-
-
-                            /*
-                               if (ship.health <= 64 ) {
-                               gradient += ship.close_field_gradient[ship_ptr->owner_id] * -1.;
-                               }
-                             */
+                            Location gradient = ship.medium_field_gradient[player_id] ;
 
                             Location diff = ship.location - ship_ptr->location;
 
@@ -669,6 +702,8 @@ int main() {
                 rusher.radius = 1.2;
                 rusher.entity_id = -1;
 
+                // The exact values used here were found using an exhaustive search
+
                 if (map.ships[player_id][1].location.pos_y  < map.map_height * 0.333) {
 
                     if (map.ships[player_id][1].location.pos_x < map.map_width * 0.333) {
@@ -724,20 +759,24 @@ int main() {
             hlt::Ship *ship_ptr = nullptr;
 
             auto it = map.ships.begin();
-
-
             for(; it != map.ships.end(); it++) {
 
                 if(it->first != player_id) {
 
                     std::vector<hlt::Ship> &v = it->second;
-
                     for(int i=0; i<v.size(); i++) {
 
                         hlt::Ship &enemy = v[i];
 
                         double distance = rusher.location.get_distance_to(enemy.location);
                         double weight = distance;
+
+
+                        // TODO: make it target docked ships first.
+                        //  also make it target only one team
+                        //  also make it stop rushing if the teams has been defeated.
+
+
                         if (enemy.docking_status != hlt::ShipDockingStatus::Undocked) {
                             Planet &planet = map.get_planet( enemy.docked_planet );
                             for(int i=0; i<planet.docked_ships.size(); i++) {
@@ -756,30 +795,54 @@ int main() {
 
             assert( ship_ptr != nullptr);
 
-            hlt::Ship &enemy = *ship_ptr;
+            hlt::Ship &target = *ship_ptr;
 
+            double dist = target.location.get_distance_to(rusher.location);
+
+            const hlt::possibly<hlt::Move> move;
 
 
             auto wew = map.ships[player_id];
-            map.ships[player_id].clear();
 
-            const hlt::possibly<hlt::Move> move =
-                hlt::navigation::navigate_ship_to_dock(map, rusher, enemy, hlt::constants::MAX_SPEED);
 
-            if (move.second) {
-                for(size_t i=0; i<wew.size(); i++) {
-                    hlt::Move m = move.first;
-                    m.ship_id = wew[i].entity_id;
-                    moves.push_back(m);
-                }
+            vector<int> how_much_taking(map.ships[player_id].size(), 0);
 
-                double angle_rad  = move.first.move_angle_deg * (M_PI * 2. /360.);
-                double thrust = move.first.move_thrust;
-                rusher.location.pos_x += cos(angle_rad) * thrust;
-                rusher.location.pos_y += sin(angle_rad) * thrust;
+            // Check if there is some ships in fighting radius
+            auto it = map.ships.begin();
+            for(; it != map.ships.end(); it++) {
+                if(it->first != player_id) {
+                    std::vector<hlt::Ship> &v = it->second;
+                    for(int i=0; i<v.size(); i++) {
+                        hlt::Ship &enemy = v[i];
 
-                //ship_ptr -> targetted ++;
+                        for(int j=0; j<map.ships[player_id].size(); j++) {
+                            Ship &ship = map.ships[player_id][j];
+
+
+                            for(int a = 0; a<360; a++) {
+                                for(int r = 0; r<=7; r++) {
+
+
+
+
+
+
             }
+
+            for(size_t i=0; i<wew.size(); i++) {
+                hlt::Move m = move.first;
+                m.ship_id = wew[i].entity_id;
+                moves.push_back(m);
+            }
+
+            double angle_rad  = move.first.move_angle_deg * (M_PI * 2. /360.);
+            double thrust = move.first.move_thrust;
+            rusher.location.pos_x += cos(angle_rad) * thrust;
+            rusher.location.pos_y += sin(angle_rad) * thrust;
+
+
+
+            //ship_ptr -> targetted ++;
 
             if (!hlt::out::send_moves(moves)) {
                 hlt::Log::log("send_moves failed; exiting");

@@ -19,6 +19,7 @@ namespace hlt {
 
         int targetted = 0;
 
+        int hitting = 0;
 
         double distance_to_my_closest_planet = 10000;
 
