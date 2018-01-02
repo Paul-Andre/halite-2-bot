@@ -13,6 +13,9 @@ using std::vector;
 using namespace hlt;
 using namespace std;
 
+
+typedef unsigned int uint;
+
 #define SQR(x) ((x)*(x))
 
 
@@ -20,7 +23,7 @@ bool defending = false;
 bool fleeing = false;
 bool rushing = false;
 
-bool always_rushing = true;
+bool always_rushing = false;
 bool naive_rushing = false;
 
 Ship rusher;
@@ -31,8 +34,8 @@ vector<bool> is_planet_in_center;
 #define medium_std_dev 15.
 
 
-        int number_going_to_center = 0;
-        
+int number_going_to_center = 0;
+
 bool should_rush(Map &map) {
 
 
@@ -49,7 +52,10 @@ bool should_rush(Map &map) {
 }
 
 
+
 void remove_ships_that_will_die(Map &map) {
+
+    auto &ships = map.ships;
 
     // now I quadratically iterate over everything because it's the easiest thing at this stage
 
@@ -65,8 +71,12 @@ void remove_ships_that_will_die(Map &map) {
                     double dist = ship1.location.get_distance_to(ship2.location);
 
                     if (dist <= constants::WEAPON_RADIUS) {
-                        ship1.hitting ++;
-                        ship2.hitting ++;
+                        if(ship1.docking_status == ShipDockingStatus::Undocked) {
+                            ship1.hitting ++;
+                        }
+                        if(ship2.docking_status == ShipDockingStatus::Undocked) {
+                            ship2.hitting ++;
+                        }
                     }
                 }
             }
@@ -85,8 +95,12 @@ void remove_ships_that_will_die(Map &map) {
                     double dist = ship1.location.get_distance_to(ship2.location);
 
                     if (dist <= constants::WEAPON_RADIUS) {
-                        ship1.health -= (double)constants::WEAPON_DAMAGE / ship2.hitting
-                        ship2.health -= (double)constants::WEAPON_DAMAGE / ship1.hitting
+                        if(ship1.docking_status == ShipDockingStatus::Undocked) {
+                            ship2.health -= (double)constants::WEAPON_DAMAGE / ship1.hitting;
+                        }
+                        if(ship2.docking_status == ShipDockingStatus::Undocked) {
+                            ship1.health -= (double)constants::WEAPON_DAMAGE / ship2.hitting;
+                        }
                     }
                 }
             }
@@ -94,20 +108,22 @@ void remove_ships_that_will_die(Map &map) {
     }
 
 
+    /*
     for(int i=0; i<ships.size(); i++) {
         for(int ii=0; ii<ships[i].size(); ii++) {
             if (ships[i][ii].health < 0) {
                 ships[i][ii] = ships[i].back();
-                map.ship_map[i].remove(ship[i][ii].entity_id);
-                ships.pop_back();
+                map.ship_map[i].erase(ships[i][ii].entity_id);
+                ships[i].pop_back();
                 if (ii < ships[i].size()) {
-                    map.ship_map[i][ship[i][ii].entity_id] = ii;
+                    map.ship_map[i][ships[i][ii].entity_id] = ii;
                 }
                 ii --;
             }
         }
     }
-
+    */
+    // TODO: go over all planets and remove the ships that would be dead
 }
 
 
@@ -172,14 +188,12 @@ int main() {
 
 
         // Count ships and decide modes
-
-
         int my_ships = map.ships[player_id].size();
         int max_opponent_ships = 0;
 
-        for (auto& player_ship : map.ships) {
-            if (player_ship.first != player_id) {
-                max_opponent_ships = std::max(max_opponent_ships, (int) player_ship.second.size());
+        for (uint i = 0; i<map.ships.size(); i++) {
+            if (i != player_id) {
+                max_opponent_ships = std::max(max_opponent_ships, (int) map.ships[i].size());
             }
         }
 
@@ -442,15 +456,6 @@ int main() {
 
                         weight += (docked*4./7. + weight*docked*(1./12.)*4) * total_protection * 0.03;
 
-                        /*
-                           if(weight/7. < 12./docked) {
-                           weight *= 0.5;
-                           }
-
-                           weight = weight*0.8 +  //arbitrary number
-                           docked*4./7. + weight*docked*(1./12.)*4;
-                         */
-
 
                     }
                     else {
@@ -463,19 +468,9 @@ int main() {
                             }
                         }
 
-                        //threat -= planet.medium_field[player_id];
-
-
-                        //threat /= map.ships[player_id].size();
 
                         weight *= 1 + ((double)docked/planet.docking_spots);
 
-                        /*
-                           if (!planet.targetted && planet.docked_ships.size() == 0 && threat > 1) {
-                        //weight *= (1 + threat * 0.5);
-                        continue;
-                        }
-                         */
 
                     }
 
@@ -556,6 +551,9 @@ int main() {
                                 ship_ptr->close_field[ship_ptr->owner_id]
                                 >
                                 ship.close_field[player_id]
+
+                                || ship.hitting
+
                            ) {
 
                             go_straight = false;
@@ -793,53 +791,60 @@ int main() {
             }
 
 
-            assert( ship_ptr != nullptr);
+            if ( ship_ptr != nullptr) {
 
-            hlt::Ship &target = *ship_ptr;
+                hlt::Ship &target = *ship_ptr;
 
-            double dist = target.location.get_distance_to(rusher.location);
+                double dist = target.location.get_distance_to(rusher.location);
 
-            const hlt::possibly<hlt::Move> move;
+                
 
+                auto wew = map.ships[player_id];
+                map.ships.clear();
 
-            auto wew = map.ships[player_id];
-
-
-            vector<int> how_much_taking(map.ships[player_id].size(), 0);
-
-            // Check if there is some ships in fighting radius
-            auto it = map.ships.begin();
-            for(; it != map.ships.end(); it++) {
-                if(it->first != player_id) {
-                    std::vector<hlt::Ship> &v = it->second;
-                    for(int i=0; i<v.size(); i++) {
-                        hlt::Ship &enemy = v[i];
-
-                        for(int j=0; j<map.ships[player_id].size(); j++) {
-                            Ship &ship = map.ships[player_id][j];
-
-
-                            for(int a = 0; a<360; a++) {
-                                for(int r = 0; r<=7; r++) {
+                const hlt::possibly<hlt::Move> move =
+                    hlt::navigation::navigate_ship_to_dock(map, rusher, target, hlt::constants::MAX_SPEED);
 
 
 
+                /*
+
+                vector<int> how_much_taking(map.ships[player_id].size(), 0);
+
+                // Check if there is some ships in fighting radius
+                auto it = map.ships.begin();
+                for(; it != map.ships.end(); it++) {
+                    if(it->first != player_id) {
+                        std::vector<hlt::Ship> &v = it->second;
+                        for(int i=0; i<v.size(); i++) {
+                            hlt::Ship &enemy = v[i];
+
+                            for(int j=0; j<map.ships[player_id].size(); j++) {
+                                Ship &ship = map.ships[player_id][j];
 
 
+                                for(int a = 0; a<360; a++) {
+                                    for(int r = 0; r<=7; r++) {
 
+                }
+                                    */
+
+                if (move.second) {
+
+                    for(size_t i=0; i<wew.size(); i++) {
+                        hlt::Move m = move.first;
+                        m.ship_id = wew[i].entity_id;
+                        moves.push_back(m);
+                    }
+
+                    double angle_rad  = move.first.move_angle_deg * (M_PI * 2. /360.);
+                    double thrust = move.first.move_thrust;
+                    rusher.location.pos_x += cos(angle_rad) * thrust;
+                    rusher.location.pos_y += sin(angle_rad) * thrust;
+                }
+
+            
             }
-
-            for(size_t i=0; i<wew.size(); i++) {
-                hlt::Move m = move.first;
-                m.ship_id = wew[i].entity_id;
-                moves.push_back(m);
-            }
-
-            double angle_rad  = move.first.move_angle_deg * (M_PI * 2. /360.);
-            double thrust = move.first.move_thrust;
-            rusher.location.pos_x += cos(angle_rad) * thrust;
-            rusher.location.pos_y += sin(angle_rad) * thrust;
-
 
 
             //ship_ptr -> targetted ++;

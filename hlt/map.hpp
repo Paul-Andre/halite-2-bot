@@ -10,8 +10,8 @@ namespace hlt {
     public:
         int map_width, map_height;
 
-        std::vector< std::vector<Ship> > ships;
-        std::vector< entity_map<unsigned int>> ship_map;
+        std::unordered_map<PlayerId, std::vector<Ship>> ships;
+        std::unordered_map<PlayerId, entity_map<unsigned int>> ship_map;
 
         std::vector<Planet> planets;
         entity_map<unsigned int> planet_map;
