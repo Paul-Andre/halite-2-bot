@@ -6,5 +6,5 @@ cmake .
 make MyBot
 
 #cd replays
- ./hlt_client/hlt_client/client.py gym -r "./MyBot22" -r "./MyBot" -b ./halite -i 200
+ ./hlt_client/hlt_client/client.py gym -r "./MyBotCurrent" -r "./MyBot" -b ./halite -i 200
 

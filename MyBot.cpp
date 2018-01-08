@@ -137,7 +137,7 @@ int main() {
 
     srand(time(nullptr));
 
-    const hlt::Metadata metadata = hlt::initialize("23");
+    const hlt::Metadata metadata = hlt::initialize("24");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -511,6 +511,10 @@ int main() {
 
                             double distance = ship.location.get_distance_to(enemy.location);
 
+                            if (distance < 12 && enemy.hitting) {
+                                distance *= 0.3;
+                            }
+
                             if (naive_rushing || (enemy.docking_status == hlt::ShipDockingStatus::Undocked
                                     || enemy.docking_status == hlt::ShipDockingStatus::Undocking)){
 
@@ -606,6 +610,11 @@ int main() {
                     }
 
                     if ( go_straight) {
+
+                        if (dist < 12) {
+                           ship_ptr->hitting ++; 
+                           ship.hitting ++; 
+                        }
 
                         const hlt::possibly<hlt::Move> move =
                             hlt::navigation::navigate_ship_to_dock(map, ship, *ship_ptr, hlt::constants::MAX_SPEED);
