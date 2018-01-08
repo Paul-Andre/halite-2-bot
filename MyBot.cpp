@@ -137,7 +137,7 @@ int main() {
 
     srand(time(nullptr));
 
-    const hlt::Metadata metadata = hlt::initialize("24");
+    const hlt::Metadata metadata = hlt::initialize("25");
     const hlt::PlayerId player_id = metadata.player_id;
 
     const hlt::Map& initial_map = metadata.initial_map;
@@ -512,26 +512,30 @@ int main() {
                             double distance = ship.location.get_distance_to(enemy.location);
 
                             if (distance < 12 && enemy.hitting) {
-                                distance *= 0.3;
+                                distance *= 0.5;
                             }
 
                             if (naive_rushing || (enemy.docking_status == hlt::ShipDockingStatus::Undocked
                                     || enemy.docking_status == hlt::ShipDockingStatus::Undocking)){
 
-                                distance /= 5;
-                                double weight = distance * distance;
+                                //distance /= 5;
+                                double weight = distance * 0.5;
                                 int k = enemy.targetted;
 
+                                /*
                                 if (distance_to_target_planet != 10000) {
                                     weight *= 0.7*(enemy.distance_to_my_closest_planet)/ distance_to_target_planet;
                                 }
+                                */
 
 
                                 while(k!=0) {
+                                    /*
                                     if(defending) {
                                         weight *= 0.7*(enemy.distance_to_my_closest_planet)/ distance_to_target_planet;
-                                    }
-                                    weight *= 1.5;
+                                    r
+                                    */
+                                    weight *= 1.1;
                                     k--;
                                 }
 
